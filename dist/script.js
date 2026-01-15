@@ -2,7 +2,7 @@
      LOGIC CORE (CONNECTED)
    ========================================= */
 
-const API_URL = 'http://localhost:3000/api'; // Change to your production URL when deploying
+const API_URL = 'https://sour-loralee-sfdgs-4f800a41.koyeb.app/api'; // Change to your production URL when deploying
 let currentUser = null;
 let currentEvents = []; // Cache for events to support filtering/scanning locally
 let joinedEventIds = [];
@@ -592,4 +592,5 @@ function initCreateHandle() {
         if(diff > 50) cSheet.classList.add('expanded');
         else if(diff < -50) closeCreateModal();
     }, {passive:true});
+
 }
