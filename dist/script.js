@@ -2,7 +2,7 @@
      PROJECT FIDA: LOGIC CORE (CONNECTED)
    ========================================= */
 
-const API_URL = 'http://localhost:3000/api'; // Ensure this matches your backend
+const API_URL = 'https://sour-loralee-sfdgs-4f800a41.koyeb.app/api'; //match backend
 let currentUser = null;
 let currentEvents = []; 
 let joinedEventIds = [];
