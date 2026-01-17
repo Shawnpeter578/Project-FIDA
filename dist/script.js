@@ -1,50 +1,47 @@
 /* =========================================
-     LOGIC CORE (CONNECTED)
+     PROJECT FIDA: LOGIC CORE (CONNECTED)
    ========================================= */
 
-const API_URL = 'https://sour-loralee-sfdgs-4f800a41.koyeb.app/api'; // Change to your production URL when deploying
+const API_URL = 'http://localhost:3000/api'; // Ensure this matches your backend
 let currentUser = null;
-let currentEvents = []; // Cache for events to support filtering/scanning locally
+let currentEvents = []; 
 let joinedEventIds = [];
 let html5QrcodeScanner = null;
 let currentSearch = '';
 
-// --- INITIALIZATION ---
+// INIT
 window.addEventListener('load', () => {
-    // Splash Screen
-    setTimeout(() => document.getElementById('splashScreen').style.opacity = '0', 1200);
-    setTimeout(() => document.getElementById('splashScreen').style.visibility = 'hidden', 1800);
+    setTimeout(() => {
+        const splash = document.getElementById('splashScreen');
+        splash.style.opacity = '0';
+        setTimeout(() => splash.classList.add('hidden'), 600);
+    }, 1200);
 
-    // Initialize UI Handlers
     initCreateHandle();
+
     document.querySelectorAll('.overlay').forEach(o => {
         o.addEventListener('click', e => { if (e.target === o) o.classList.remove('visible'); });
     });
 
-    // Initialize Google Auth (New)
-    initGoogleAuth();
+    if(window.google) {
+        google.accounts.id.initialize({
+            client_id: "611302719944-4fn2hr7i1l9tn2chvu9719pngbcpgrau.apps.googleusercontent.com", // IMPORTANT: Add your actual Client ID
+            callback: handleGoogleResponse
+        });
+        // Render the button inside the new UI container
+        const btnContainer = document.getElementById("googleBtnContainer");
+        if(btnContainer) {
+            google.accounts.id.renderButton(
+                btnContainer,
+                { theme: "outline", size: "large", width: "100%", shape: "pill" }
+            );
+        }
+    }
     
-    // Check for existing session
     checkAuth();
 });
 
-function initGoogleAuth() {
-    // This function assumes the Google Script is loaded in index.html
-    // We will initialize it dynamically if needed or rely on the HTML attributes
-    // But since we need to handle the credential response in JS:
-    if(window.google) {
-        google.accounts.id.initialize({
-            client_id: "611302719944-4fn2hr7i1l9tn2chvu9719pngbcpgrau.apps.googleusercontent.com", // REPLACE THIS
-            callback: handleGoogleResponse
-        });
-        google.accounts.id.renderButton(
-            document.getElementById("googleBtnContainer"),
-            { theme: "outline", size: "large", width: "100%" }
-        );
-    }
-}
-
-// --- AUTHENTICATION ---
+// Ahh yes, authentication
 
 async function handleGoogleResponse(response) {
     try {
@@ -58,14 +55,14 @@ async function handleGoogleResponse(response) {
         
         if(data.success) {
             localStorage.setItem('fida_token', data.token);
-            toast(`Welcome, ${data.user.name}`);
+            showToast(`Welcome, ${data.user.name}`);
             checkAuth();
         } else {
-            toast('Login Failed');
+            showToast('Login Failed');
         }
     } catch(e) {
         console.error(e);
-        toast('Connection Error');
+        showToast('Connection Error');
     }
 }
 
@@ -84,19 +81,20 @@ async function checkAuth() {
 
         if (res.ok) {
             currentUser = await res.json();
-            joinedEventIds = currentUser.joinedEvents || []; // Sync joined events
+            // Ensure joinedEvents is an array of strings (IDs)
+            joinedEventIds = currentUser.joinedEvents || []; 
+            
             hideAuthScreen();
             updateUserUI();
             fetchAndRenderFeed();
+            // Switch to home view by default
+            switchView('home', document.querySelector('.dock-item:first-child'));
         } else {
-            // Token invalid
-            logout();
+            logout(); // Token invalid
         }
     } catch (e) {
         console.error(e);
-        // If network error, maybe keep them logged in or show offline mode? 
-        // For now, let's show auth screen
-        showAuthScreen();
+        showAuthScreen(); // Network error / offline
     }
 }
 
@@ -112,192 +110,207 @@ function logout() {
     localStorage.removeItem('fida_token');
     currentUser = null;
     joinedEventIds = [];
-    
-    // Reset View
-    document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-    document.getElementById('viewHome').classList.add('active');
-    
     showAuthScreen();
-    
-    // Re-render Google Button if necessary
-    if(window.google) {
-        google.accounts.id.renderButton(
-            document.getElementById("googleBtnContainer"),
-            { theme: "outline", size: "large", width: "100%" }
-        );
-    }
-}
+    // Re-render button if needed
+    location.reload(); 
+}//logs tf out
 
 function updateUserUI() {
     if (!currentUser) return;
-    const firstName = currentUser.name.split(' ')[0].toUpperCase();
-    document.getElementById('headerName').innerText = firstName;
-    
-    const avatarHtml = currentUser.picture 
-        ? `<img src="${currentUser.picture}">` 
-        : firstName.charAt(0);
-        
-    document.getElementById('headerAvatar').innerHTML = avatarHtml;
+    document.getElementById('headerName').innerText = currentUser.name.split(' ')[0].toUpperCase();
+    const avatarImg = currentUser.picture ? `<img src="${currentUser.picture}">` : currentUser.name.charAt(0);
+    document.getElementById('headerAvatar').innerHTML = avatarImg;
     
     // Settings Page
     document.getElementById('settingsName').innerText = currentUser.name;
-    document.getElementById('settingsEmail').innerText = currentUser.email || 'Google Account'; // Google Auth might not always return email in the 'me' object depending on scope, but usually does in token
-    document.getElementById('settingsAvatar').innerHTML = currentUser.picture 
-        ? `<img src="${currentUser.picture}" style="width:100%;height:100%;object-fit:cover;">` 
-        : firstName.charAt(0);
+    document.getElementById('settingsEmail').innerText = currentUser.email;
+    document.getElementById('settingsAvatar').innerHTML = avatarImg;
 }
 
-// --- DATA FETCHING & RENDERING ---
+// --- DATA & RENDERING ---
 
 async function fetchAndRenderFeed() {
     try {
         const res = await fetch(`${API_URL}/events`);
         const data = await res.json();
-        currentEvents = data; // Cache for other views
+        currentEvents = data;
+        
         renderFeed();
+        renderPasses();
+        renderHostDashboard();
     } catch (e) {
         console.error("Failed to fetch events", e);
-        toast("Could not load feed");
+        showToast("Could not load feed");
     }
 }
 
 function renderFeed() {
-    const c = document.getElementById('clubsContainer'); 
-    c.innerHTML = '';
+    const container = document.getElementById('clubsContainer'); 
+    container.innerHTML = '';
     
-    // Filter
-    let data = currentEvents.filter(item => 
+    const filtered = currentEvents.filter(item => 
         item.title.toLowerCase().includes(currentSearch) || 
         (item.location && item.location.toLowerCase().includes(currentSearch))
     );
 
-    if(data.length === 0) {
-        c.innerHTML = `<div class="empty-state">NO SIGNALS FOUND</div>`;
+    if(filtered.length === 0) {
+        container.innerHTML = `<div class="empty-state">NO SIGNALS FOUND</div>`;
         return;
     }
 
-    data.forEach(item => {
-        // Note: MongoDB uses _id, frontend mock used id. We map _id to id for consistency if needed, or just use _id.
-        const id = item._id; 
+    filtered.forEach(event => {
+        // Handle ID mapping (MongoDB _id vs local id)
+        const id = event._id || event.id;
         const isJoined = joinedEventIds.includes(id);
         
-        // Format Date
-        const dateObj = new Date(item.date);
-        const dateStr = dateObj.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+        // Safety checks for new fields
+        const attendeesCount = event.attendees ? event.attendees.length : 0;
+        const maxAttendees = event.maxAttendees || Infinity;
+        const isSoldOut = attendeesCount >= maxAttendees;
+        const isOnline = event.mode === 'online';
+        const locIcon = isOnline ? '🌐' : '📍';
+        const priceDisplay = (!event.price || event.price === 0) ? 'FREE' : `$${event.price}`;
         
+        // Badge Logic
+        let badgeHtml = '';
+        if (isSoldOut && !isJoined) {
+            badgeHtml = '<div style="background:var(--text-main); color:var(--bg-body); font-size:0.7rem; font-weight:800; padding:4px 8px; border-radius:4px; position:absolute; top:20px; right:20px;">SOLD OUT</div>';
+        }
+
         const html = `
-        <div class="ticket ${isJoined ? 'joined' : ''}" onclick="openDetail('${id}')">
-            <div class="ticket-inner">
-                <div class="ticket-status-bar"></div>
-                <div class="ticket-content">
-                    <div class="ticket-bg-num">${id.toString().substring(id.toString().length - 2)}</div>
-                    <div class="t-header">
-                        <h3 class="t-title">${item.title}</h3>
-                        <div class="t-loc">
-                            <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> 
-                            ${item.location || 'Unknown Loc'}
+            <div class="ticket ${isJoined ? 'joined' : ''}" onclick="openDetail('${id}')">
+                <div class="ticket-inner">
+                    <div class="ticket-status-bar"></div>
+                    ${badgeHtml}
+                    <div class="ticket-bg-num">0${id.toString().substring(id.toString().length-2)}</div>
+                    <div class="ticket-content">
+                        <div class="t-header">
+                            <div class="t-title">${event.title}</div>
+                            <div class="t-loc">${locIcon} ${event.location || 'TBA'}</div>
+                        </div>
+                        <div class="t-desc">${event.description || ''}</div>
+                        <div class="t-info-grid">
+                            <div class="t-cell"><label>Date</label><div>${formatDate(event.date)}</div></div>
+                            <div class="t-cell"><label>Time</label><div>${event.time}</div></div>
+                            <div class="t-cell t-price"><div>${priceDisplay}</div></div>
                         </div>
                     </div>
-                    <p class="t-desc">${item.description || ''}</p>
-                    <div class="t-info-grid">
-                        <div class="t-cell"><label>DATE</label><div>${dateStr}</div></div>
-                        <div class="t-cell"><label>TIME</label><div>${item.time}</div></div>
-                        <div class="t-cell t-price">${item.category || 'Event'}</div>
-                    </div>
-                </div>
-                <div class="ticket-rip"><div class="rip-line"></div></div>
-                <div class="ticket-stub">
-                    <div class="ticket-stub-inner" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                        <div class="stub-code">*${id.toString().substring(0,4).toUpperCase()}*</div>
-                        <button class="btn-action" onclick="event.stopPropagation(); ${isJoined ? `openDetail('${id}')` : `joinClub('${id}')`}">${isJoined ? 'View Pass' : 'Join Drop'}</button>
+                    <div class="ticket-rip"><div class="rip-line"></div></div>
+                    <div class="ticket-stub">
+                        <div class="stub-code">129394</div>
+                        <button class="btn-action ${isSoldOut && !isJoined ? 'sold-out' : ''}" onclick="event.stopPropagation(); ${isJoined ? `openDetail('${id}')` : `joinClub('${id}')`}">
+                             ${isJoined ? 'GOT PASS' : (isSoldOut ? 'FULL' : 'GET PASS')}
+                        </button>
                     </div>
                 </div>
             </div>
-        </div>`;
-        c.insertAdjacentHTML('beforeend', html);
+        `;
+        container.insertAdjacentHTML('beforeend', html);
     });
 }
 
 function renderPasses() {
-    const c = document.getElementById('passesContainer'); c.innerHTML = '';
-    const data = currentEvents.filter(x => joinedEventIds.includes(x._id));
+    const container = document.getElementById('passesContainer'); 
+    container.innerHTML = '';
     
-    if(data.length === 0) {
-        c.innerHTML = `<div class="empty-state">NO PASSES ACQUIRED<br>Join events to populate this grid.</div>`;
+    // Filter events user has joined
+    const myEvents = currentEvents.filter(e => joinedEventIds.includes(e._id || e.id));
+    
+    if(myEvents.length === 0) {
+        container.innerHTML = '<div class="empty-state">No active passes.<br>Find an event in the feed.</div>';
         return;
     }
 
-    data.forEach(item => {
-        const id = item._id;
+    myEvents.forEach(event => {
+        const id = event._id || event.id;
+        
+        // Determine check-in status (mock logic for client side display, real logic requires attendee object)
+        // We assume 'currentUser._id' is in 'event.attendees' if joined.
+        // For status, we'd need the backend to return { userId, status } objects in attendees array.
+        // Fallback:
+        const statusText = 'SCAN ENTRY'; 
+        const statusClass = '';
+
+        const isOnline = event.mode === 'online';
+        const locIcon = isOnline ? '🌐' : '📍';
+
         const html = `
-        <div class="ticket joined" onclick="openDetail('${id}')">
-            <div class="ticket-inner">
-                <div class="ticket-status-bar"></div>
-                <div class="ticket-content">
-                    <div class="ticket-bg-num">${id.toString().substring(id.toString().length-2)}</div>
-                    <h3 class="t-title">${item.title}</h3>
-                    <div class="t-loc">${item.location || 'Unknown Loc'}</div>
-                    <div style="margin-top:20px; text-align:center; padding:10px; background:var(--bg-card-sub); border-radius:12px; border:1px dashed var(--border-strong);">
-                            <div style="font-family:var(--font-barcode); font-size:1.5rem; opacity:0.5;">${id.toString().toUpperCase()}</div>
-                            <div style="font-size:0.8rem; font-weight:700; color:var(--accent);">ACCESS GRANTED</div>
+            <div class="ticket joined ${statusClass}" onclick="openDetail('${id}')">
+                <div class="ticket-inner">
+                    <div class="ticket-status-bar"></div>
+                     <div class="ticket-content">
+                        <div class="t-header">
+                            <div class="t-title">${event.title}</div>
+                            <div class="t-loc">${locIcon} ${event.location}</div>
+                        </div>
+                        <div style="text-align:center; padding:20px 0;">
+                            <button class="btn-action" style="width:100%; border:2px solid var(--text-main); color:var(--text-main); background:transparent;" onclick="event.stopPropagation(); showUserQR('${id}', '${event.title.replace(/'/g, "\\'")}')">
+                                SHOW QR CODE
+                            </button>
+                            <div style="font-size:0.9rem; letter-spacing:0.1em; font-weight:700; color:var(--text-muted); margin-top:12px;">${statusText}</div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>`;
-        c.insertAdjacentHTML('beforeend', html);
+        `;
+        container.insertAdjacentHTML('beforeend', html);
     });
 }
 
 function renderHostDashboard() {
-    const c = document.getElementById('hostContainer'); c.innerHTML = '';
+    const container = document.getElementById('hostContainer'); 
+    container.innerHTML = '';
     
-    // Filter events where creatorId matches current user ID
     if(!currentUser) return;
-    
-    const hostedEvents = currentEvents.filter(x => x.creatorId === currentUser._id);
+    const hostedEvents = currentEvents.filter(x => x.creatorId === currentUser._id); // Ensure backend returns creatorId
 
     if(hostedEvents.length === 0) {
-        c.innerHTML = `<div class="empty-state">NO HOSTED EVENTS<br>Create a drop to track attendees here.</div>`;
+        container.innerHTML = '<div class="empty-state">You haven\'t dropped any events.<br>Tap + to create.</div>';
         return;
     }
 
-    hostedEvents.forEach(item => {
+    hostedEvents.forEach(event => {
+        const count = event.attendees ? event.attendees.length : 0;
         const html = `
-        <div class="ticket" onclick="openHostDetail('${item._id}')">
-            <div class="ticket-inner">
-                <div class="ticket-content">
-                    <h3 class="t-title">${item.title}</h3>
-                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px;">
-                        <div>
-                            <div style="font-size:0.8rem; color:var(--text-muted); font-weight:700;">DATE</div>
-                            <div style="font-family:var(--font-mono); font-weight:600;">${item.date}</div>
+            <div class="ticket" onclick="openHostDetail('${event._id}')">
+                <div class="ticket-inner">
+                     <div class="ticket-content">
+                        <div class="t-header">
+                            <div class="t-title">${event.title}</div>
+                            <div class="t-loc">Guest List: ${count}</div>
                         </div>
-                        <div style="text-align:right;">
-                            <div style="font-size:2.5rem; font-weight:700; color:var(--text-main); line-height:1;">${item.attendees ? item.attendees.length : 0}</div>
-                            <div style="font-size:0.8rem; color:var(--accent); font-weight:700;">MEMBERS JOINED</div>
-                        </div>
+                        <div class="t-desc">Tap to manage access & verify tickets.</div>
                     </div>
                 </div>
             </div>
-        </div>`;
-        c.insertAdjacentHTML('beforeend', html);
+        `;
+        container.insertAdjacentHTML('beforeend', html);
     });
 }
 
-// --- ACTIONS (CREATE, JOIN) ---
 
-async function handleCreate(e) {
+
+async function handleCreate(e) {//Shaun wanted more settings. Take more settings niga
     e.preventDefault();
     const token = localStorage.getItem('fida_token');
     
+    
+    const maxInput = document.getElementById('cMax').value;
+    const maxAttendees = maxInput ? parseInt(maxInput) : Infinity;
+    const mode = document.getElementById('cMode').value || 'offline';
+    const category = document.getElementById('cCategory').value || 'PARTY';
+
     const payload = {
         title: document.getElementById('cName').value,
         description: document.getElementById('cDesc').value,
         date: document.getElementById('cDate').value,
         time: document.getElementById('cTime').value,
         location: document.getElementById('cLoc').value,
-        category: document.getElementById('cPrice').value || 'General', // Using price input for category or price text
-        image: document.getElementById('cImagePreview').src || null
+        price: document.getElementById('cPrice').value || 0,
+        image: document.getElementById('cImagePreview').src || null,
+        mode: mode,
+        maxAttendees: maxAttendees,
+        category: category
     };
 
     try {
@@ -312,26 +325,24 @@ async function handleCreate(e) {
         
         const data = await res.json();
         if(data.success) {
-            toast('Drop Published');
+            showToast('Drop Published');
             closeCreateModal();
             e.target.reset();
-            document.getElementById('cImagePreview').style.display='none';
-            // Refresh Feed
+            document.getElementById('cImagePreview').style.display = 'none';
+            // Refetch
             fetchAndRenderFeed();
-            // Switch to host view
             switchView('host', document.querySelectorAll('.dock-item')[3]);
         } else {
-            toast(data.error || 'Creation Failed');
+            showToast(data.error || 'Creation Failed');
         }
     } catch(err) {
-        toast('Network Error');
+        showToast('Network Error');
     }
 }
 
 async function joinClub(id) {
     const token = localStorage.getItem('fida_token');
-    if(joinedEventIds.includes(id)) return;
-
+    
     try {
         const res = await fetch(`${API_URL}/events/join`, {
             method: 'POST',
@@ -343,114 +354,220 @@ async function joinClub(id) {
         });
         
         const data = await res.json();
-        
         if(data.success) {
-            joinedEventIds.push(id); // Optimistic UI update
+            // Optimistic Update
+            joinedEventIds.push(id);
+            showToast('Pass Granted');
             
-            // Refetch to ensure backend sync
-            checkAuth(); // This refreshes currentUser and joinedEvents
+            // Refresh Data to sync counts
+            fetchAndRenderFeed();
             
-            toast('Pass Generated');
-            if(document.getElementById('detailsModal').classList.contains('visible')) openDetail(id);
-            else renderFeed();
+            // If details modal is open, refresh it
+            if(document.getElementById('detailsModal').classList.contains('visible')) {
+                openDetail(id);
+            }
         } else {
-            toast(data.error || 'Join Failed');
+            showToast(data.error || 'Join Failed');
         }
     } catch(err) {
-        toast('Network Error');
+        showToast('Network Error');
     }
 }
 
-// Note: Backend does not explicitly support "Leaving" an event in the provided app.js
-// So we will hide the "Unjoin" button or implement it only if backend supports it.
-// For now, we will just show "Joined" state.
 
-// --- DETAILS & MODALS ---
 
 function openDetail(id) {
-    const item = currentEvents.find(x => x._id === id);
-    if(!item) return;
-
-    const isJoined = joinedEventIds.includes(id);
-    // QR Code format: eventId-userId
-    const qrData = `${id}-${currentUser._id}`;
-    const qrUrl = isJoined ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}` : '';
+    const event = currentEvents.find(e => (e._id || e.id) === id);
+    if(!event) return;
     
-    document.getElementById('detailsContent').innerHTML = `
-        ${item.image ? `<img src="${item.image}" class="detail-cover">` : ''}
-        <h1 style="font-size:2.2rem; font-weight:800; line-height:1; margin-bottom:16px; letter-spacing: -0.04em;">${item.title}</h1>
-        <p style="color:var(--text-sec); line-height:1.6; margin-bottom:32px; font-size:1.05rem;">${item.description || 'No details provided.'}</p>
+    const isJoined = joinedEventIds.includes(id);
+    const modal = document.getElementById('detailsModal');
+    const content = document.getElementById('detailsContent');
+    
+    const count = event.attendees ? event.attendees.length : 0;
+    const max = event.maxAttendees || Infinity;
+    const isSoldOut = count >= max;
+    const priceDisplay = (!event.price) ? 'FREE' : `$${event.price}`;
+
+    content.innerHTML = `
+        <img src="${event.image || ''}" class="detail-cover" style="${!event.image ? 'display:none' : ''}">
+        <h2 style="font-size:2rem; font-weight:800; line-height:1; margin-bottom:8px;">${event.title}</h2>
+        <div style="display:flex; gap:12px; margin-bottom:24px;">
+            <span class="t-loc">${event.location}</span>
+            <span class="t-loc">${formatDate(event.date)} @ ${event.time}</span>
+        </div>
         
-        <div style="background:var(--bg-card-sub); padding:20px; border-radius:20px; border:1px solid var(--border-strong); margin-bottom:32px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                <span style="color:var(--text-muted); font-weight:600; font-size:0.9rem;">LOCATION</span>
-                <span style="font-weight:600; font-family:var(--font-mono);">${item.location || 'TBA'}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between;">
-                <span style="color:var(--text-muted); font-weight:600; font-size:0.9rem;">START TIME</span>
-                <span style="font-weight:600; font-family:var(--font-mono);">${item.time}</span>
-            </div>
+        <div style="background:var(--bg-card-sub); padding:16px; border-radius:16px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:700; color:var(--text-sec); font-size:0.9rem;">Spots Left</span>
+            <span style="font-weight:700; font-family:var(--font-mono);">${max === Infinity ? 'Unlimited' : (max - count) + ' / ' + max}</span>
         </div>
 
-        ${isJoined ? `
-            <div style="text-align:center; padding:24px; border:1px dashed var(--accent); background:rgba(255, 42, 42, 0.04); border-radius:24px; margin-bottom:32px;">
-                <div style="background:white; padding:10px; border-radius:12px; display:inline-block; margin-bottom:12px;">
-                    <img src="${qrUrl}" style="width:140px; height:140px; display:block;">
-                </div>
-                <div style="font-family:var(--font-barcode); font-size:2rem; opacity:0.8; letter-spacing:0.05em;">ENTRY PASS</div>
-                <div style="font-size:0.8rem; color:var(--text-sec); margin-top:8px; font-weight:600;">SHOW TO HOST</div>
-            </div>
-            ` : `
-            <div style="text-align:center; padding:20px; color:var(--text-sec); font-size:0.9rem; margin-bottom:20px;">Join to reveal entry code.</div>
-            <button class="btn-main" onclick="joinClub('${id}')">JOIN DROP • ${item.category || 'Free'}</button>
-        `}
+        <p style="color:var(--text-sec); line-height:1.6; margin-bottom:32px;">${event.description || 'No description.'}</p>
+        <button class="btn-main ${isSoldOut && !isJoined ? 'sold-out' : ''}" onclick="${isJoined ? '' : `joinClub('${id}')`}">
+            ${isJoined ? 'ALREADY JOINED' : (isSoldOut ? 'SOLD OUT' : `GET PASS • ${priceDisplay}`)}
+        </button>
     `;
-    document.getElementById('detailsModal').classList.add('visible');
+    
+    modal.classList.add('visible');
 }
 
 function openHostDetail(id) {
-    const item = currentEvents.find(x => x._id === id);
-    if(!item) return;
-
-    // Backend doesn't return full user details in "attendees" array (it returns IDs).
-    // In a real app, we would need a backend endpoint like /api/events/:id/attendees
-    // For this strict integration, we can only show the count unless we fetch users.
-    // Displaying count for now.
+    const event = currentEvents.find(e => (e._id || e.id) === id);
+    if(!event) return;
     
-    document.getElementById('hostDetailContent').innerHTML = `
-        <h2 style="font-size:1.5rem; font-weight:800; margin-bottom:4px;">${item.title}</h2>
-        <div style="color:var(--text-sec); margin-bottom:24px;">Guest List</div>
-        <div style="padding:20px; text-align:center; border:1px dashed var(--border-strong); border-radius:12px;">
-            <div style="font-size:2rem; font-weight:700;">${item.attendees ? item.attendees.length : 0}</div>
-            <div style="color:var(--text-muted);">Total Attendees</div>
-            <div style="font-size:0.8rem; margin-top:10px; color:var(--text-muted);">Detailed guest list requires backend expansion.</div>
+    // In a real implementation, you would fetch the list of users here
+    // For now we just show the dashboard structure
+    const content = document.getElementById('hostDetailContent');
+    
+    content.innerHTML = `
+        <div style="margin-bottom:20px; text-align:center;">
+            <h2 style="font-size:1.8rem; font-weight:800; margin-bottom:4px;">${event.title}</h2>
         </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;">
+            <div style="background:var(--bg-card-sub); padding:16px; border-radius:16px; text-align:center;">
+                <div style="font-size:1.5rem; font-weight:700;">${event.attendees ? event.attendees.length : 0}</div>
+                <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">SOLD</div>
+            </div>
+            <div style="background:var(--bg-card-sub); padding:16px; border-radius:16px; text-align:center;">
+                <div style="font-size:1.5rem; font-weight:700; color:var(--success);">--</div>
+                <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">CHECKED IN</div>
+            </div>
+        </div>
+        <div class="empty-state" style="padding:20px 0;">Use the Scanner button on the Host Dashboard to check people in.</div>
     `;
+    
     document.getElementById('hostDetailModal').classList.add('visible');
 }
 
-// --- UTILS & UI HELPERS (Unchanged mostly) ---
+function showUserQR(eventId, eventTitle) {
+    const modal = document.getElementById('qrDisplayModal');
+    const target = document.getElementById('qrModalTarget');
+    const title = document.getElementById('qrModalTitle');
+    const codeText = document.getElementById('qrModalCodeText');
+    
+    target.innerHTML = ''; 
+    title.textContent = eventTitle;
+    
+    // Payload: EventID-UserID
+    const payload = `${eventId}-${currentUser._id}`;
+    codeText.textContent = payload;
+    
+    new QRCode(target, {
+        text: payload,
+        width: 250,
+        height: 250,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
+    
+    modal.classList.add('visible');
+}
+
+// --- SCANNER ---
+
+function startScanner() {
+    document.getElementById('scannerModal').classList.add('visible');
+    if(!html5QrcodeScanner) {
+        html5QrcodeScanner = new Html5Qrcode("reader");
+    }
+    
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    html5QrcodeScanner.start(
+        { facingMode: "environment" }, 
+        config, 
+        onScanSuccess
+    ).catch(err => {
+        console.error("Scanner Error", err);
+        showToast("Camera Access Denied");
+    });
+}
+
+function stopScanner() {
+    document.getElementById('scannerModal').classList.remove('visible');
+    if(html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => {
+            html5QrcodeScanner.clear();
+        }).catch(err => console.log(err));
+    }
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+    // Pause scanning
+    if(html5QrcodeScanner) html5QrcodeScanner.pause();
+    document.getElementById('scannerModal').classList.remove('visible');
+    
+    // Parse Payload: EventId-UserId
+    const splitIndex = decodedText.indexOf('-');
+    if(splitIndex === -1) {
+        showScanResult('error', 'Invalid Format', 'Unknown');
+        return;
+    }
+    
+    const eventId = decodedText.substring(0, splitIndex);
+    const userId = decodedText.substring(splitIndex + 1);
+    
+    // Logic: verify I own this event, and user is in it.
+    // 1. Find Event
+    const event = currentEvents.find(e => (e._id || e.id) === eventId);
+    
+    if(!event) {
+        showScanResult('error', 'Event Not Found', userId);
+        return;
+    }
+    
+    if(event.creatorId !== currentUser._id) {
+        showScanResult('error', 'Wrong Host', 'This is not your event');
+        return;
+    }
+    
+    // 2. Check Attendees List (Assuming attendees is array of userIDs string)
+    // Note: If backend returns object array, this needs logic adjustment
+    // We will assume backend returns array of IDs for this check
+    if(event.attendees && event.attendees.includes(userId)) {
+        // TODO: Call Backend API to mark as checked-in
+        // await fetch(`${API_URL}/events/checkin`, ...)
+        showScanResult('success', 'ACCESS GRANTED', userId);
+    } else {
+        showScanResult('error', 'Not on List', userId);
+    }
+}
+
+function showScanResult(type, title, sub) {
+    const modal = document.getElementById('scanResultModal');
+    const icon = document.getElementById('scanIcon');
+    const status = document.getElementById('scanStatus');
+    const name = document.getElementById('scanName');
+    
+    modal.classList.add('visible');
+    status.textContent = title;
+    name.textContent = sub;
+    
+    if(type === 'success') {
+        icon.style.color = 'var(--success)';
+        icon.style.border = '2px solid var(--success)';
+        icon.innerHTML = '✓';
+        status.style.color = 'var(--success)';
+    } else {
+        icon.style.color = 'var(--accent)';
+        icon.style.border = '2px solid var(--accent)';
+        icon.innerHTML = '✕';
+        status.style.color = 'var(--accent)';
+    }
+}
+
+// --- UTILITIES ---
 
 function switchView(viewName, el) {
+    document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+    const targetId = viewName === 'home' ? 'viewHome' : 
+                     viewName === 'passes' ? 'viewPasses' :
+                     viewName === 'host' ? 'viewHost' : 'viewSettings';
+    document.getElementById(targetId).classList.add('active');
+    
     document.querySelectorAll('.dock-item').forEach(i => i.classList.remove('active'));
     if(el) el.classList.add('active');
-    
-    document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-    
-    if(viewName === 'home') {
-        document.getElementById('viewHome').classList.add('active');
-        renderFeed();
-    } else if (viewName === 'passes') {
-        document.getElementById('viewPasses').classList.add('active');
-        renderPasses();
-    } else if (viewName === 'host') {
-        document.getElementById('viewHost').classList.add('active');
-        renderHostDashboard();
-    } else if (viewName === 'settings') {
-        document.getElementById('viewSettings').classList.add('active');
-        updateUserUI();
-    }
-    window.scrollTo({top:0, behavior:'smooth'});
+    window.scrollTo(0,0);
 }
 
 function handleSearch(val) {
@@ -458,139 +575,63 @@ function handleSearch(val) {
     renderFeed();
 }
 
-function openCreateModal() { document.getElementById('createModal').classList.add('visible'); }
-function closeCreateModal() {
-    const m = document.getElementById('createModal');
-    m.classList.remove('visible');
-    setTimeout(() => {
-        const s = m.querySelector('.sheet');
-        s.classList.remove('expanded');
-        s.classList.remove('maximized');
-    }, 500);
-}
-function previewImage(inpt) {
-    if(inpt.files[0]) {
-        const r = new FileReader();
-        r.onload = e => {
-            document.getElementById('cImagePreview').src = e.target.result;
-            document.getElementById('cImagePreview').style.display = 'block';
-        };
-        r.readAsDataURL(inpt.files[0]);
-    }
-}
-function toast(msg) {
+function showToast(msg) {
     const t = document.getElementById('toast');
-    document.getElementById('toastMsg').innerText = msg;
+    document.getElementById('toastMsg').textContent = msg;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 3000);
 }
-function updateAvatar(input) {
-    // Backend doesn't support avatar update yet, only Google avatar
-    toast("Avatar managed by Google Account");
+
+function formatDate(dateStr) {
+    if(!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-// --- SCANNER (Client-Side Verification Logic) ---
-// Note: This verifies the QR code format, but cannot verify if the user *actually* exists 
-// without an endpoint to check "is User X in Event Y".
-// We will do a basic check against the pattern.
-
-function startScanner() {
-    document.getElementById('scannerModal').classList.add('visible');
-    if(!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
+// Helpers for create form
+function setEventMode(mode) {
+    document.getElementById('cMode').value = mode;
+    document.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
     
-    html5QrcodeScanner.start(
-        { facingMode: "environment" }, 
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        onScanSuccess,
-        (err) => {}
-    ).catch(err => toast("Camera error"));
-}
-
-function stopScanner() {
-    if(html5QrcodeScanner) {
-        html5QrcodeScanner.stop().then(() => {
-            document.getElementById('scannerModal').classList.remove('visible');
-        }).catch(err => document.getElementById('scannerModal').classList.remove('visible'));
+    if(mode === 'online') {
+        document.getElementById('btnOnline').classList.add('active');
+        document.getElementById('cLoc').placeholder = "Server URL";
     } else {
-        document.getElementById('scannerModal').classList.remove('visible');
+        document.getElementById('btnOffline').classList.add('active');
+        document.getElementById('cLoc').placeholder = "Location";
     }
 }
 
-function onScanSuccess(decodedText, decodedResult) {
-    // Expected: eventId-userId
-    const splitIndex = decodedText.indexOf('-');
-    if(splitIndex === -1) {
-        showScanResult('error', 'Invalid Ticket');
-        return;
-    }
-    
-    const eventId = decodedText.substring(0, splitIndex);
-    const userId = decodedText.substring(splitIndex + 1);
-    
-    // Check if I am the host of this event
-    const event = currentEvents.find(c => c._id === eventId);
-    
-    if (!event) {
-        showScanResult('error', 'Event Not Found');
-        return;
-    }
-    
-    if (event.creatorId !== currentUser._id) {
-        showScanResult('error', 'Wrong Event Host');
-        return;
-    }
-    
-    // Check if scanned user is in attendees list
-    if (event.attendees.includes(userId)) {
-         showScanResult('success', 'ACCESS GRANTED');
-    } else {
-        showScanResult('error', 'Not on Guest List');
+function selectCategory(el, val) {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('cCategory').value = val;
+}
+
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Note: Simplification - skipping Cropper.js for backend integration for now
+            // You can add it back if you wish
+            const img = document.getElementById('cImagePreview');
+            img.src = e.target.result;
+            img.style.display = 'block';
+        }
+        reader.readAsDataURL(input.files[0]);
     }
 }
 
-function showScanResult(status, msg) {
-    if(html5QrcodeScanner) try{ html5QrcodeScanner.pause(); }catch(e){}
-    
-    const m = document.getElementById('scanResultModal');
-    const icon = document.getElementById('scanIcon');
-    const txt = document.getElementById('scanStatus');
-    const sub = document.getElementById('scanName');
-    
-    m.classList.add('visible');
-    sub.innerText = msg;
-    
-    if(status === 'success') {
-        icon.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
-        icon.style.color = 'var(--success)';
-        icon.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-        txt.innerText = 'VALID';
-        txt.style.color = 'var(--success)';
-    } else {
-        icon.style.backgroundColor = 'rgba(230, 25, 25, 0.2)';
-        icon.style.color = 'var(--accent)';
-        icon.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
-        txt.innerText = 'INVALID';
-        txt.style.color = 'var(--accent)';
-    }
-}
+function openCreateModal() { document.getElementById('createModal').classList.add('visible'); }
+function closeCreateModal() { document.getElementById('createModal').classList.remove('visible'); }
 
-function closeResultAndScan() {
-    document.getElementById('scanResultModal').classList.remove('visible');
-    startScanner();
-}
-
-// Drag handle logic
 function initCreateHandle() {
-    const cHandle = document.getElementById('createHandle');
-    const cSheet = document.querySelector('#createModal .sheet');
-    if(!cHandle || !cSheet) return;
+    const handle = document.getElementById('createHandle');
+    const sheet = document.querySelector('#createModal .sheet');
+    if(!handle || !sheet) return;
     
     let startY;
-    cHandle.addEventListener('touchstart', e => startY = e.touches[0].clientY, {passive:true});
-    cHandle.addEventListener('touchend', e => {
-        const diff = startY - e.changedTouches[0].clientY;
-        if(diff > 50) cSheet.classList.add('expanded');
-        else if(diff < -50) closeCreateModal();
+    handle.addEventListener('touchstart', e => startY = e.touches[0].clientY, {passive:true});
+    handle.addEventListener('touchend', e => {
+        if(startY - e.changedTouches[0].clientY < -50) closeCreateModal();
     }, {passive:true});
-
 }

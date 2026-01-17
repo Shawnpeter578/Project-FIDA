@@ -181,7 +181,19 @@ app.get('/api/events', async (req, res) => {
 
 app.post('/api/events', authenticateJWT, async (req, res) => {
     try {
-        const { title, date, time, location, category, description, image } = req.body;
+        
+        const  {
+            title,
+            description,
+            date,
+            time,
+            location,
+            price,
+            image,
+            mode,
+            maxAttendees,
+            category
+        } = req.body
         
         const creatorId = req.userId;
         const creatorName = req.userName;
@@ -191,7 +203,7 @@ app.post('/api/events', authenticateJWT, async (req, res) => {
         }
 
         const newEvent = {
-            title, date, time, location, category, description, 
+            title, date, time, location, category, description, maxAttendees, mode, price, 
             creatorId, 
             creatorName, 
             image: image || "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
