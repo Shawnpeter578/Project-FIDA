@@ -2,25 +2,67 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
-
 const jwt = require('jsonwebtoken');
+
 const SECRET_KEY = process.env.JWT_SECRET || "default_test_secret"; // Fallback for testing
 
-//setup mongodb
+//=============
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const dbUrl = process.env.DATABASE_URL || "mongodb://localhost:27017";
 const DATABASE_NAME = "clubspot";
+const client = new MongoClient(dbUrl, {
+    serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+    }
+});
+let db;
+let usersCollection;
+let eventsCollection;
+//=============
+
+//Cloudinary config ==========
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "Chris's cloud",
+  api_key: process.env.CLOUDINARY_API_KEY || "cloudy and a chance of meatballs",
+  api_secret: process.env.CLOUDINARY_API_SECRET || "jimmy"
+});
+async function uploadImageQuick(imageBinary) {
+    try {
+        if (imageBinary.startsWith('data:image')) {
+            const result = await cloudinary.uploader.upload(imageBinary, {
+                folder: 'chrisEventFolder',
+                resource_type: 'auto'
+            });
+            return result.secure_url;
+        }else if (imageBinary.startsWith('http')) {
+            return imageBinary;
+        }else {
+            const result = await cloudinary.uploader.upload(imageBinary, {
+                folder: 'event-images'
+            });
+            return result.secure_url;
+        }
+        console.log("Uploaded image successfully")
+    } catch (error) {
+        console.error('Cloudinary upload error:', error);
+        return "https://images.unsplash.com/photo-1540575467063-178a50c2df87";
+    }
+}
+//=================
 
 // --- Google Auth Setup ---
 const { OAuth2Client } = require('google-auth-library');
-// CLIENT IDs
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "YOUR_WEB_CLIENT_ID";
 const g_client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-// --- App Configuration ---
+
+
 const app = express();
 
-// --- Middleware ---
+
 app.use(cors({
   origin: [
     'http://localhost:5173',      // Your local dev URL
@@ -31,25 +73,16 @@ app.use(cors({
   methods: ['POST', 'PUT', 'GET', 'OPTIONS', 'HEAD', 'DELETE'],
 }));
 
+//for image uploads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
 app.set('trust proxy', 1); 
-
 app.use(express.json()); 
-
-// Serve static files from 'dist' directory
 app.use(express.static(path.join(__dirname, 'dist')));
 
 
-const client = new MongoClient(dbUrl, {
-    serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-    }
-});
 
-let db;
-let usersCollection;
-let eventsCollection;
 
 // Exported connection function
 async function connectToMongoDB() {
@@ -69,8 +102,8 @@ async function connectToMongoDB() {
         return false;
     }
 }
-
-// Function to close connection (useful for tests)
+async function uploadToCloudStorage() {
+}
 async function closeMongoDB() {
     await client.close();
 }
@@ -189,7 +222,7 @@ app.post('/api/events', authenticateJWT, async (req, res) => {
             time,
             location,
             price,
-            image,
+            image, //AAAAAAURGHHHH. Too big base-64 string. Rejected by mongodb
             mode,
             maxAttendees,
             category
@@ -197,16 +230,20 @@ app.post('/api/events', authenticateJWT, async (req, res) => {
         
         const creatorId = req.userId;
         const creatorName = req.userName;
+        let imageUrl = "chris.jpg"
 
         if (!title || !date) {
             return res.status(400).json({ error: "Missing required fields" });
         }
-
+        if (image && image.trim() !== "") {
+            imageUrl = await uploadImageQuick(image);
+        }
+        console.log("attempting upload")
         const newEvent = {
             title, date, time, location, category, description, maxAttendees, mode, price, 
             creatorId, 
             creatorName, 
-            image: image || "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
+            image: imageUrl,
             attendees: [],
             comments: [],
             createdAt: new Date()
