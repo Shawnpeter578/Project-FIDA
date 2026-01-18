@@ -198,7 +198,10 @@ function renderFeed() {
         const isSoldOut = attendeesCount >= maxAttendees;
         const isOnline = event.mode === 'online';
         const locIcon = isOnline ? '🌐' : '📍';
+        const hostIcon = '@';
+
         const priceDisplay = (!event.price || event.price === 0) ? 'FREE' : `$${event.price}`;
+        const hostName = (!event.creatorName) ? 'Unknown' : event.creatorName.split(' ')[0];
         
         // Badge Logic
         let badgeHtml = '';
@@ -216,6 +219,7 @@ function renderFeed() {
                         <div class="t-header">
                             <div class="t-title">${event.title}</div>
                             <div class="t-loc">${locIcon} ${event.location || 'TBA'}</div>
+                            <div class="t-loc">${hostIcon} ${hostName || 'TBA'}</div>
                         </div>
                         <div class="t-desc">${event.description || ''}</div>
                         <div class="t-info-grid">
@@ -262,6 +266,7 @@ function renderPasses() {
 
         const isOnline = event.mode === 'online';
         const locIcon = isOnline ? '🌐' : '📍';
+        const hostName = (!event.creatorName) ? 'Unknown' : event.creatorName.split(' ')[0];
 
         const html = `
             <div class="ticket joined ${statusClass}" onclick="openDetail('${id}')">
@@ -271,6 +276,7 @@ function renderPasses() {
                         <div class="t-header">
                             <div class="t-title">${event.title}</div>
                             <div class="t-loc">${locIcon} ${event.location}</div>
+                            <div class="t-loc">@ ${hostName}</div>
                         </div>
                         <div style="text-align:center; padding:20px 0;">
                             <button class="btn-action" style="width:100%; border:2px solid var(--text-main); color:var(--text-main); background:transparent;" onclick="event.stopPropagation(); showUserQR('${id}', '${event.title.replace(/'/g, "\\'")}')">
@@ -433,12 +439,15 @@ function openDetail(id) {
     const isSoldOut = count >= max;
     const priceDisplay = (!event.price) ? 'FREE' : `$${event.price}`;
 
+    const hostName = (!event.creatorName) ? 'Unknown' : event.creatorName;
+
     content.innerHTML = `
         <img src="${event.image || ''}" class="detail-cover" style="${!event.image ? 'display:none' : ''}">
         <h2 style="font-size:2rem; font-weight:800; line-height:1; margin-bottom:8px;">${event.title}</h2>
         <div style="display:flex; gap:12px; margin-bottom:24px;">
             <span class="t-loc">${event.location}</span>
             <span class="t-loc">${formatDate(event.date)} @ ${event.time}</span>
+            <span class="t-loc">@ ${hostName}</span>
         </div>
         
         <div style="background:var(--bg-card-sub); padding:16px; border-radius:16px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;">
