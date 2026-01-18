@@ -53,6 +53,18 @@ async function uploadImageQuick(imageBinary) {
 }
 //=================
 
+//Multer configuration
+const multer = require('multer');
+const storage = multer.memoryStorage(); // Store file in memory
+const upload = multer({ 
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+        fields: 20 
+    }
+});
+//===================
+
 // --- Google Auth Setup ---
 const { OAuth2Client } = require('google-auth-library');
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "YOUR_WEB_CLIENT_ID";
@@ -102,8 +114,7 @@ async function connectToMongoDB() {
         return false;
     }
 }
-async function uploadToCloudStorage() {
-}
+
 async function closeMongoDB() {
     await client.close();
 }
@@ -212,35 +223,46 @@ app.get('/api/events', async (req, res) => {
 });
 
 
-app.post('/api/events', authenticateJWT, async (req, res) => {
+app.post('/api/events', authenticateJWT, upload.single('image'), // Handle single file upload
+    async (req, res) => {
     try {
-        
-        const  {
+        const {
             title,
             description,
             date,
             time,
             location,
             price,
-            image, //AAAAAAURGHHHH. Too big base-64 string. Rejected by mongodb
             mode,
             maxAttendees,
             category
-        } = req.body
+        } = req.body;
         
         const creatorId = req.userId;
         const creatorName = req.userName;
-        let imageUrl = "chris.jpg"
+        let imageUrl = "chris.jpg";
 
         if (!title || !date) {
             return res.status(400).json({ error: "Missing required fields" });
         }
-        if (image && image.trim() !== "") {
-            imageUrl = await uploadImageQuick(image);
+        
+        console.log("attempting upload");
+        
+        // Process file if uploaded
+        if (req.file) {
+            // Convert buffer to base64 for Cloudinary
+            const imageBuffer = req.file.buffer;
+            const imageBase64 = `data:${req.file.mimetype};base64,${imageBuffer.toString('base64')}`;
+            
+            // Upload to Cloudinary
+            imageUrl = await uploadImageQuick(imageBase64);
         }
-        console.log("attempting upload")
+        
         const newEvent = {
-            title, date, time, location, category, description, maxAttendees, mode, price, 
+            title, date, time, location, category, description, 
+            maxAttendees: maxAttendees === 'Infinity' ? Infinity : parseInt(maxAttendees), 
+            mode, 
+            price: parseFloat(price), 
             creatorId, 
             creatorName, 
             image: imageUrl,

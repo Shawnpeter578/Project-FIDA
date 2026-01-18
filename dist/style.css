@@ -433,6 +433,14 @@
             height: auto;
             min-height: 60vh;
         }
+        .image-loading {
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .btn-loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
         
         .sheet-handle { width: 48px; height: 5px; background: var(--border-strong); border-radius: 100px; margin: 16px auto; flex-shrink: 0; }
         .sheet-body { padding: 0 28px 48px; overflow-y: auto; flex: 1; }

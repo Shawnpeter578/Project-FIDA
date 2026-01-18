@@ -40,6 +40,35 @@ window.addEventListener('load', () => {
     
     checkAuth();
 });
+document.getElementById('cImageInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const preview = document.getElementById('cImagePreview');
+        
+        // Show loading on preview
+        preview.src = '';
+        preview.style.background = '#f3f4f6';
+        preview.innerHTML = '<div class="image-loading">Loading preview...</div>';
+        preview.style.display = 'flex';
+        preview.style.alignItems = 'center';
+        preview.style.justifyContent = 'center';
+        
+        // Create preview
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            preview.innerHTML = '';
+            preview.style.background = '';
+            preview.src = event.target.result;
+            preview.style.display = 'block';
+        };
+        
+        reader.onerror = function() {
+            preview.innerHTML = 'Failed to load image';
+        };
+        
+        reader.readAsDataURL(file);
+    }
+});
 
 // Ahh yes, authentication
 
@@ -290,37 +319,48 @@ function renderHostDashboard() {
 
 
 
-async function handleCreate(e) {//Shaun wanted more settings. Take more settings niga
+async function handleCreate(e) {
     e.preventDefault();
     const token = localStorage.getItem('fida_token');
-    
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<div class="spinner"></div> Publishing...';
+    submitBtn.disabled = true;
     
     const maxInput = document.getElementById('cMax').value;
     const maxAttendees = maxInput ? parseInt(maxInput) : Infinity;
     const mode = document.getElementById('cMode').value || 'offline';
     const category = document.getElementById('cCategory').value || 'PARTY';
+    
+    const imagePreview = document.getElementById('cImagePreview');
+    const imageFile = document.getElementById('cImageInput')?.files[0]; // Get the actual file
 
-    const payload = {
-        title: document.getElementById('cName').value,
-        description: document.getElementById('cDesc').value,
-        date: document.getElementById('cDate').value,
-        time: document.getElementById('cTime').value,
-        location: document.getElementById('cLoc').value,
-        price: document.getElementById('cPrice').value || 0,
-        image: document.getElementById('cImagePreview').src || null,
-        mode: mode,
-        maxAttendees: maxAttendees,
-        category: category
-    };
-
+    // Create FormData instead of JSON
+    const formData = new FormData();
+    formData.append('title', document.getElementById('cName').value);
+    formData.append('description', document.getElementById('cDesc').value);
+    formData.append('date', document.getElementById('cDate').value);
+    formData.append('time', document.getElementById('cTime').value);
+    formData.append('location', document.getElementById('cLoc').value);
+    formData.append('price', document.getElementById('cPrice').value || 0);
+    formData.append('mode', mode);
+    formData.append('maxAttendees', maxAttendees);
+    formData.append('category', category);
+    
+    // Append the actual file instead of base64
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
+    showToast('Uploading your drop...', 'info', 0);
     try {
         const res = await fetch(`${API_URL}/events`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
+                // DON'T set Content-Type - browser will set it automatically with boundary
             },
-            body: JSON.stringify(payload)
+            body: formData
         });
         
         const data = await res.json();
@@ -328,15 +368,19 @@ async function handleCreate(e) {//Shaun wanted more settings. Take more settings
             showToast('Drop Published');
             closeCreateModal();
             e.target.reset();
-            document.getElementById('cImagePreview').style.display = 'none';
-            // Refetch
+            imagePreview.style.display = 'none';
             fetchAndRenderFeed();
             switchView('host', document.querySelectorAll('.dock-item')[3]);
         } else {
             showToast(data.error || 'Creation Failed');
         }
     } catch(err) {
+        console.error(err);
         showToast('Network Error');
+    } finally {
+        // Restore button state
+        submitBtn.innerHTML = originalBtnText;
+        submitBtn.disabled = false;
     }
 }
 
