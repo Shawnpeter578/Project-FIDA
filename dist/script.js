@@ -2,7 +2,7 @@
      PROJECT FIDA: LOGIC CORE (CONNECTED)
    ========================================= */
 
-const API_URL = 'https://sour-loralee-sfdgs-4f800a41.koyeb.app/api'; //match backend
+const API_URL = 'https://independent-irita-clubspot-9e43f2fa.koyeb.app/api'; //match backend
 let currentUser = null;
 let currentEvents = []; 
 let joinedEventIds = [];

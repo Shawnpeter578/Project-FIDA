@@ -2,4 +2,5 @@
 *notes/
 *.env
 *node_modules/
+*clubapp-mini/
 

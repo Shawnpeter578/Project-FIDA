@@ -79,7 +79,7 @@ app.use(cors({
   origin: [
     'http://localhost:5173',      // Your local dev URL
     'http://localhost:3000',      // Alternative local URL
-    'https://sour-loralee-sfdgs-4f800a41.koyeb.app', // Your production URL
+    'https://independent-irita-clubspot-9e43f2fa.koyeb.app/api', // Your production URL
   ],
   // credentials: true, // Not strictly needed for Header-based auth, but harmless to keep
   methods: ['POST', 'PUT', 'GET', 'OPTIONS', 'HEAD', 'DELETE'],
