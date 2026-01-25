@@ -234,12 +234,12 @@ app.post('/api/events', authenticateJWT, upload.single('image'), // Handle singl
             location,
             price,
             mode,
-            maxAttendees,
             category
         } = req.body;
         
         const creatorId = req.userId;
         const creatorName = req.userName;
+        const maxAttendees = parseInt(req.body.maxAttendees, 10);
         let imageUrl = "chris.jpg";
 
         if (!title || !date) {
@@ -268,7 +268,8 @@ app.post('/api/events', authenticateJWT, upload.single('image'), // Handle singl
             image: imageUrl,
             attendees: [],
             comments: [],
-            createdAt: new Date()
+            createdAt: new Date(),
+            checkedIn: []
         };
 
         const result = await eventsCollection.insertOne(newEvent);
@@ -309,18 +310,37 @@ app.post('/api/events/join', authenticateJWT, async (req, res) => {
         const { eventId } = req.body;
         if (!eventId) return res.status(400).json({ error: "Missing Event ID" });
 
-        await eventsCollection.updateOne(
-            { _id: new ObjectId(eventId) },
+        // 1. Attempt to update the event ONLY if it's not full
+        const eventUpdate = await eventsCollection.updateOne(
+            { 
+                _id: new ObjectId(eventId),
+                // Condition 1: Must have space
+                $expr: { $lt: [{ $size: "$attendees" }, { $toInt: "$maxAttendees" }] },
+                // Condition 2: User must NOT already be in the list
+                attendees: { $ne: userId },
+
+                //condiiton 3: Creator may not join their own event
+                creatorId: { $ne: userId }
+            },
             { $addToSet: { attendees: userId } }
         );
+        console.log(eventUpdate.matchedCount)
 
+        // 2. Check if the update actually happened
+        if (eventUpdate.matchedCount === 0) {
+            // Either the event doesn't exist, or it's full
+            return res.status(400).json({ error: "Can't join this event, nub" });
+        }
+
+        // 3. If successful, link the event to the user
         await usersCollection.updateOne(
             { _id: new ObjectId(userId) },
             { $addToSet: { joinedEvents: eventId } }
         );
 
-        res.status(200).json({ success: true });
+        res.status(200).json({ success: true, message: "Successfully joined!" });
     } catch (e) { 
+        console.error(e);
         res.status(500).json({ error: "Join failed" });
     }
 });

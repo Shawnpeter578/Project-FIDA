@@ -4,7 +4,7 @@
   "description": "This is for club connectivity",
   "main": "server.js",
   "scripts": {
-    "test": "vitest",
+    "test": "jest",
     "start": "node server.js"
   },
   "keywords": [],
@@ -17,11 +17,11 @@
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "google-auth-library": "^10.5.0",
+    "jest": "^30.2.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^7.0.0",
     "multer": "^2.0.2",
     "package-lock-only": "^0.0.4",
-    "supertest": "^7.2.2",
-    "vitest": "^4.0.17"
+    "supertest": "^7.2.2"
   }
 }

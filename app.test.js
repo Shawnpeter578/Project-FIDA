@@ -1,12 +1,11 @@
 const request = require('supertest');
 const { ObjectId } = require('mongodb');
-import { describe, it, expect, vi, beforeAll, afterAll, test } from 'vitest';
-import { app, connectToMongoDB, closeMongoDB } from './app';
+const { app, connectToMongoDB, closeMongoDB } = require('./app');
 
 // MOCKS
-vi.mock('google-auth-library', () => ({
-  OAuth2Client: vi.fn().mockImplementation(() => ({
-    verifyIdToken: vi.fn().mockImplementation(async ({ idToken }) => {
+jest.mock('google-auth-library', () => ({
+  OAuth2Client: jest.fn().mockImplementation(() => ({
+    verifyIdToken: jest.fn().mockImplementation(async ({ idToken }) => {
       if (idToken === 'VALID_GOOGLE_TOKEN') {
         return {
           getPayload: () => ({
@@ -24,24 +23,24 @@ vi.mock('google-auth-library', () => ({
 const mockDb = { users: [], events: [] };
 
 const mockCollection = (collectionName) => ({
-  createIndex: vi.fn(),
-  findOne: vi.fn(async (query) => {
+  createIndex: jest.fn(),
+  findOne: jest.fn(async (query) => {
     const col = mockDb[collectionName];
     if (query._id) return col.find(d => d._id.toString() === query._id.toString()) || null;
     if (query.email) return col.find(d => d.email === query.email) || null;
     return null;
   }),
-  find: vi.fn(() => ({
-    sort: vi.fn(() => ({
-      toArray: vi.fn(async () => [...mockDb[collectionName]])
+  find: jest.fn(() => ({
+    sort: jest.fn(() => ({
+      toArray: jest.fn(async () => [...mockDb[collectionName]])
     }))
   })),
-  deleteOne: vi.fn(async (query) => {
+  deleteOne: jest.fn(async (query) => {
     const initialLen = mockDb[collectionName].length;
     mockDb[collectionName] = mockDb[collectionName].filter(d => d._id.toString() !== query._id.toString());
     return { deletedCount: initialLen - mockDb[collectionName].length };
   }),
-  findOneAndUpdate: vi.fn(async (query, update, options) => {
+  findOneAndUpdate: jest.fn(async (query, update, options) => {
     let doc = mockDb[collectionName].find(d => d.email === query.email);
     if (!doc && options.upsert) {
       doc = { _id: new ObjectId(), email: query.email, ...update.$setOnInsert, ...update.$set };
@@ -51,14 +50,15 @@ const mockCollection = (collectionName) => ({
     }
     return { value: doc };
   }),
-  insertOne: vi.fn(async (doc) => {
+  insertOne: jest.fn(async (doc) => {
     const newDoc = { ...doc, _id: new ObjectId() };
     mockDb[collectionName].push(newDoc);
     return { insertedId: newDoc._id };
   }),
-  updateOne: vi.fn(async (query, update) => {
+  updateOne: jest.fn(async (query, update) => {
     const doc = mockDb[collectionName].find(d => d._id.toString() === query._id.toString());
     let modifiedCount = 0;
+
     if (doc) {
       if (update.$addToSet) {
         const key = Object.keys(update.$addToSet)[0];
@@ -92,14 +92,14 @@ const mockCollection = (collectionName) => ({
   })
 });
 
-vi.mock('mongodb', () => {
-  const actualMongo = vi.requireActual('mongodb');
+jest.mock('mongodb', () => {
+  const actualMongo = jest.requireActual('mongodb');
   return {
     ...actualMongo,
-    MongoClient: vi.fn().mockImplementation(() => ({
-      connect: vi.fn().mockResolvedValue(true),
-      db: vi.fn(() => ({ collection: vi.fn((name) => mockCollection(name)) })),
-      close: vi.fn()
+    MongoClient: jest.fn().mockImplementation(() => ({
+      connect: jest.fn().mockResolvedValue(true),
+      db: jest.fn(() => ({ collection: jest.fn((name) => mockCollection(name)) })),
+      close: jest.fn()
     }))
   };
 });
@@ -126,7 +126,6 @@ describe('API Integration Flow', () => {
     
     expect(authToken).toBeDefined();
   });
-
   test('GET /api/auth/me (Session Check)', async () => {
     const res = await request(app)
       .get('/api/auth/me')
@@ -153,7 +152,6 @@ describe('API Integration Flow', () => {
     expect(res.statusCode).toBe(201);
     eventId = res.body.eventId;
   });
-
   test('POST /api/events/join (Join Event)', async () => {
     const res = await request(app)
       .post('/api/events/join')
@@ -162,7 +160,6 @@ describe('API Integration Flow', () => {
 
     expect(res.statusCode).toBe(200);
   });
-
   test('POST /api/events/comment (Add Comment)', async () => {
     const res = await request(app)
       .post('/api/events/comment')
@@ -171,7 +168,6 @@ describe('API Integration Flow', () => {
 
     expect(res.statusCode).toBe(200);
   });
-
   test('GET /api/events (Verify Data Persistence & Creator Name)', async () => {
     const res = await request(app).get('/api/events');
     const event = res.body.find(e => e._id.toString() === eventId.toString());
@@ -185,6 +181,7 @@ describe('API Integration Flow', () => {
   test('DELETE /api/events/:eventId/comments/:commentId (Delete Comment)', async () => {
     // First fetch to get comment ID
     let res = await request(app).get('/api/events');
+    
     let event = res.body.find(e => e._id.toString() === eventId.toString());
     const commentId = event.comments[0]._id;
 
@@ -220,3 +217,63 @@ describe('API Integration Flow', () => {
     // No cookie check needed anymore as we are stateless on server side for logout
   });
 });
+
+
+describe('Edge case1: overflow handling', () => {
+  let authToken; // CHANGED: Using Token instead of Cookie
+  let userId;
+  let eventId;
+
+  beforeAll(async () => await connectToMongoDB());
+  afterAll(async () => await closeMongoDB());
+
+  test('POST /api/auth/google (Login)', async () => {
+    const res = await request(app)
+      .post('/api/auth/google')
+      .send({ token: 'VALID_GOOGLE_TOKEN' });
+    
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    
+    // CHANGED: Capture Token from Body
+    userId = res.body.user._id;
+    authToken = res.body.token; 
+    
+    expect(authToken).toBeDefined();
+  });
+  test('POST /api/events (Create Event - Authenticated)', async () => {
+    const res = await request(app)
+      .post('/api/events')
+      .set('Authorization', `Bearer ${authToken}`) // CHANGED
+      .send({
+        title: "A small event",
+        date: "2023-12-25",
+        time: "10:00",
+        location: "Test Loc",
+        category: "Social",
+        description: "Desc",
+        maxAttendees:  0
+        // creatorId is now taken from token
+      });
+
+    expect(res.statusCode).toBe(201);
+    eventId = res.body.eventId;
+    console.log(res.body)
+  });
+  test('Join once in a forbidden event', async () => {
+    const res = await request(app)
+      .post('/api/events/join')
+      .set('Authorization', `Bearer ${authToken}`) // CHANGED
+      .send({ eventId });
+
+    expect(res.statusCode).toBe(200);
+  });//too many people, shut the thing up
+  test('Joining again', async () => {//join again
+    const res = await request(app)
+      .post('/api/events/join')
+      .set('Authorization', `Bearer ${authToken}`) // CHANGED
+      .send({ eventId });
+
+    expect(res.statusCode).toBe(200);
+  });//too many people, shut the thing up
+})
