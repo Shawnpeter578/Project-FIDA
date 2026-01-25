@@ -1,6 +1,6 @@
 const request = require('supertest');
 const { ObjectId } = require('mongodb');
-const { app, connectToMongoDB, closeMongoDB } = require('./app');
+const { app, connectToMongoDB, closeMongoDB } = require('../src/app');
 
 // MOCKS
 jest.mock('google-auth-library', () => ({
