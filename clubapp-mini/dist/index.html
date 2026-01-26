@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GigByCity | Minimal</title>
+
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <script defer src="script.js"></script>
+
+    <style>
+        :root {
+            /* Theme: Cream Autumn (Dark) */
+            --bg: #1c1917;       /* Warm Black */
+            --surface: #292524;  /* Dark Stone */
+            --text: #ffffff;     /* Cream */
+            --text-muted: #a8a29e;
+            --accent: #fb6107;   /* Autumn Rust */
+            --accent-hover: #b45309;
+            --border: #44403c;
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            line-height: 1.5;
+            padding-bottom: 80px; /* Space for dock */
+        }
+
+        /* --- Utilities --- */
+        .hidden { display: none !important; }
+        button { cursor: pointer; font-family: inherit; }
+        img { display: block; max-width: 100%; }
+
+        /* --- Layout --- */
+        header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg);
+            position: sticky; top: 0; z-index: 10;
+        }
+        .brand { font-weight: 700; font-size: 1.2rem; color: var(--accent); letter-spacing: -0.05em; }
+        .user-badge { font-size: 0.9rem; color: var(--text-muted); }
+
+        main { padding: 20px; max-width: 600px; margin: 0 auto; }
+        section { display: none; } /* Views hidden by default */
+        section.active { display: block; animation: fadeIn 0.2s; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* --- Components --- */
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .card h3 { font-size: 1.1rem; margin-bottom: 5px; color: var(--text); }
+        .meta { font-size: 0.85rem; color: var(--text-muted); font-family: monospace; display: flex; gap: 10px; }
+        .tag { background: var(--border); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
+
+        /* Inputs */
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #000;
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 4px;
+        }
+        input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+
+        /* Buttons */
+        .btn {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-weight: 700;
+            width: 100%;
+            border-radius: 2px;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+        .btn:hover { background: var(--accent-hover); }
+        .btn.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn.sm { width: auto; padding: 5px 10px; font-size: 0.8rem; }
+
+        /* Search Bar */
+        .search-row { display: flex; gap: 10px; margin-bottom: 20px; }
+        
+        /* Modals (Native-like) */
+        .modal {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 100;
+            padding: 20px;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        .modal-content {
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        /* Navigation Dock */
+        .dock {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex; justify-content: space-around;
+            padding: 15px 0;
+            z-index: 50;
+        }
+        .dock-btn {
+            background: none; border: none; color: var(--text-muted);
+            font-weight: 600; font-size: 0.8rem; text-transform: uppercase;
+        }
+        .dock-btn.active { color: var(--accent); }
+
+        /* States */
+        .sold-out { opacity: 0.5; pointer-events: none; }
+        .status-joined { border-left: 4px solid var(--accent); }
+
+        /* Scanner Video */
+        #reader { width: 100%; background: #000; margin-bottom: 10px; }
+
+        /* Toast */
+        #toast {
+            position: fixed; top: 10px; right: 10px;
+            background: var(--accent); color: #000;
+            padding: 10px 20px; font-weight: bold;
+            display: none; z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast"></div>
+
+    <header>
+        <div class="brand">GigByCity</div>
+        <div class="user-badge" id="headerName">GUEST</div>
+    </header>
+
+    <div id="authScreen" class="modal hidden">
+        <div class="modal-content" style="text-align: center;">
+            <h1 style="color:var(--accent); margin-bottom: 20px;">ACCESS GRID</h1>
+            <p style="margin-bottom: 30px; color: var(--text-muted);">Minimalist Underground Protocol</p>
+            <div id="googleBtnContainer"></div>
+        </div>
+    </div>
+
+    <main>
+        <section id="viewHome" class="active">
+            <div class="search-row">
+                <input type="text" id="searchInput" placeholder="Search frequencies..." onkeyup="handleSearch(this.value)">
+                <select id="filterSelect" onchange="applyFilter(this.value)" style="width: 100px;">
+                    <option value="ALL">ALL</option>
+                    <option value="PARTY">PARTY</option>
+                    <option value="RACE">RACE</option>
+                    <option value="SHOW">SHOW</option>
+                    <option value="MEET">MEET</option>
+                </select>
+            </div>
+            <div id="clubsContainer"></div>
+        </section>
+
+        <section id="viewPasses">
+            <h2 style="margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">MY PASSES</h2>
+            <div id="passesContainer"></div>
+        </section>
+
+        <section id="viewHost">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2>HOST CONTROL</h2>
+                <button class="btn sm" onclick="startScanner()">SCAN QR</button>
+            </div>
+            <div id="hostContainer"></div>
+        </section>
+
+        <section id="viewSettings">
+            <h2 style="margin-bottom: 15px;">PROFILE</h2>
+            <form onsubmit="saveProfile(event)">
+                <label>Full Name</label>
+                <input type="text" id="pName" required>
+                
+                <label>Email (Locked)</label>
+                <input type="email" id="pEmail" disabled style="opacity: 0.5;">
+                
+                <label>Phone</label>
+                <input type="tel" id="pPhone">
+                
+                <label>Sector / City</label>
+                <input type="text" id="pCity">
+
+                <button type="submit" class="btn" style="margin-top: 10px;">SAVE DATA</button>
+            </form>
+            <button onclick="logout()" class="btn outline" style="margin-top: 20px; border-color: #ef4444; color: #ef4444;">LOGOUT</button>
+        </section>
+    </main>
+
+    <div id="createModal" class="modal hidden">
+        <div class="modal-content">
+            <h2 style="color: var(--accent); margin-bottom: 15px;">NEW DROP</h2>
+            <form onsubmit="handleCreate(event)">
+                <input type="text" id="cName" placeholder="Event Title" required>
+                
+                <label style="font-size: 0.8rem; color: var(--text-muted);">Category</label>
+                <select id="cCategory">
+                    <option value="PARTY">PARTY</option>
+                    <option value="RACE">RACE</option>
+                    <option value="SHOW">SHOW</option>
+                    <option value="MEET">MEET</option>
+                </select>
+
+                <textarea id="cDesc" placeholder="Description / Instructions" required></textarea>
+
+                <input type="hidden" id="cMode" value="offline">
+                <input type="file" id="cImageInput" style="display:none;"> 
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <input type="date" id="cDate" required>
+                    <input type="time" id="cTime" required>
+                </div>
+                <input type="text" id="cLoc" placeholder="Location" required>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <input type="number" id="cPrice" placeholder="Price ($)">
+                    <input type="number" id="cMax" placeholder="Max Capacity">
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button type="button" class="btn outline" onclick="document.getElementById('createModal').classList.add('hidden')">CANCEL</button>
+                    <button type="submit" class="btn">PUBLISH</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="detailsModal" class="modal hidden">
+        <div class="modal-content">
+            <div id="detailsContent"></div>
+            <button class="btn outline" style="margin-top: 15px;" onclick="document.getElementById('detailsModal').classList.add('hidden')">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="qrDisplayModal" class="modal hidden">
+        <div class="modal-content" style="text-align: center; background: white; color: black;">
+            <h2 id="qrPassTitle" style="margin-bottom: 5px;">TITLE</h2>
+            <div id="qrPassMeta" style="margin-bottom: 20px; font-family: monospace;">DATE</div>
+            <div id="qrModalTarget" style="display: flex; justify-content: center;"></div>
+            <div id="qrPassUser" style="margin-top: 20px; font-weight: bold;">USER</div>
+            <button class="btn" style="margin-top: 20px; background: #000; color: #fff;" onclick="document.getElementById('qrDisplayModal').classList.add('hidden')">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="scannerModal" class="modal hidden">
+        <div class="modal-content">
+            <div id="reader"></div>
+            <button class="btn outline" onclick="stopScanner()">STOP SCAN</button>
+        </div>
+    </div>
+
+    <div id="scanResultModal" class="modal hidden">
+        <div class="modal-content" style="text-align: center;">
+            <h1 id="scanStatus" style="font-size: 2rem;">STATUS</h1>
+            <p id="scanName" style="margin-bottom: 20px; font-family: monospace;">User Info</p>
+            <button class="btn" onclick="document.getElementById('scanResultModal').classList.add('hidden'); startScanner();">SCAN NEXT</button>
+            <button class="btn outline" style="margin-top: 10px;" onclick="document.getElementById('scanResultModal').classList.add('hidden')">DONE</button>
+        </div>
+    </div>
+
+    <div id="hostDetailModal" class="modal hidden">
+        <div class="modal-content">
+            <div id="hostDetailContent"></div>
+            <button class="btn outline" style="margin-top: 15px;" onclick="document.getElementById('hostDetailModal').classList.add('hidden')">CLOSE</button>
+        </div>
+    </div>
+
+    <nav class="dock">
+        <button class="dock-btn active" onclick="switchView('home', this)">Feed</button>
+        <button class="dock-btn" onclick="switchView('passes', this)">Passes</button>
+        <button class="dock-btn" style="color:var(--accent); font-weight:900;" onclick="document.getElementById('createModal').classList.remove('hidden')">+</button>
+        <button class="dock-btn" onclick="switchView('host', this)">Host</button>
+        <button class="dock-btn" onclick="switchView('settings', this)">Profile</button>
+    </nav>
+
+    <script>
+        let currentUser = null;
+        let currentEvents = []; 
+        let joinedEventIds = [];
+        let html5QrcodeScanner = null;
+        let currentSearch = '';
+        let currentFilter = 'ALL';
+
+        window.addEventListener('load', () => {
+            // Google Auth Init
+            if(window.google) {
+                google.accounts.id.initialize({
+                    client_id: "611302719944-4fn2hr7i1l9tn2chvu9719pngbcpgrau.apps.googleusercontent.com", 
+                    callback: handleGoogleResponse
+                });
+                const btnContainer = document.getElementById("googleBtnContainer");
+                if(btnContainer) {
+                    google.accounts.id.renderButton(btnContainer, { theme: "filled_black", size: "large", width: "250" });
+                }
+            }
+            checkAuth();
+        });
+
+        // --- Auth ---
+        async function handleGoogleResponse(response) {
+            try {
+                const data = await FidaAPI.auth.googleLogin(response.credential);
+                if(data.success) {
+                    localStorage.setItem('fida_token', data.token);
+                    checkAuth();
+                } else showToast('Login Failed');
+            } catch(e) { console.error(e); }
+        }
+
+        async function checkAuth() {
+            const token = localStorage.getItem('fida_token');
+            if (!token) {
+                document.getElementById('authScreen').classList.remove('hidden');
+                return;
+            }
+            try {
+                const user = await FidaAPI.auth.getMe();
+                currentUser = user;
+                joinedEventIds = currentUser.joinedEvents || [];
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('headerName').innerText = currentUser.name;
+                fetchAndRenderFeed();
+                loadProfileData(); // Pre-fill profile
+            } catch (e) {
+                logout();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('fida_token');
+            location.reload();
+        }
+
+        // --- Views ---
+        function switchView(viewName, btnEl) {
+            document.querySelectorAll('section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.dock-btn').forEach(el => el.classList.remove('active'));
+            
+            if(btnEl) btnEl.classList.add('active');
+            
+            const map = { 'home': 'viewHome', 'passes': 'viewPasses', 'host': 'viewHost', 'settings': 'viewSettings' };
+            document.getElementById(map[viewName]).classList.add('active');
+            
+            if(viewName === 'home') fetchAndRenderFeed();
+        }
+
+        // --- Data & Render ---
+        async function fetchAndRenderFeed() {
+            try {
+                currentEvents = await FidaAPI.events.getAll();
+                renderFeed();
+                renderPasses();
+                renderHostDashboard();
+            } catch (e) { showToast('Feed Error'); }
+        }
+
+        function renderFeed() {
+            const container = document.getElementById('clubsContainer');
+            container.innerHTML = '';
+            
+            let filtered = currentEvents.filter(item => 
+                (item.title.toLowerCase().includes(currentSearch) || item.location.toLowerCase().includes(currentSearch))
+            );
+            if (currentFilter !== 'ALL') filtered = filtered.filter(item => item.category === currentFilter);
+
+            if(filtered.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:20px;">No Signals.</div>';
+                return;
+            }
+
+            filtered.forEach(event => {
+                const id = event._id || event.id;
+                const isJoined = joinedEventIds.includes(id);
+                const isHost = (currentUser && event.creatorId === currentUser._id);
+                const price = event.price ? `$${event.price}` : 'FREE';
+                
+                // Minimalist Card
+                const html = `
+                    <div class="card ${isJoined ? 'status-joined' : ''}" onclick="openDetail('${id}')">
+                        <div style="display:flex; justify-content:space-between;">
+                            <h3>${event.title}</h3>
+                            <span style="color:var(--accent); font-weight:700;">${price}</span>
+                        </div>
+                        <div class="meta">
+                            <span>${formatDate(event.date)}</span>
+                            <span>${event.time}</span>
+                            <span class="tag">${event.category || 'EVENT'}</span>
+                        </div>
+                        <div style="margin-top:8px; color:var(--text-muted); font-size:0.9rem;">${event.location}</div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function renderPasses() {
+            const container = document.getElementById('passesContainer');
+            container.innerHTML = '';
+            const myEvents = currentEvents.filter(e => joinedEventIds.includes(e._id || e.id));
+
+            if(myEvents.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-muted);">No active passes.</div>';
+                return;
+            }
+
+            myEvents.forEach(event => {
+                const id = event._id || event.id;
+                const html = `
+                    <div class="card" style="border-left: 4px solid var(--accent);">
+                        <h3>${event.title}</h3>
+                        <div class="meta">${formatDate(event.date)} @ ${event.time}</div>
+                        <button class="btn sm" style="margin-top:10px;" onclick="showUserQR('${id}', '${event.title.replace(/'/g, "\\'")}')">SHOW QR ENTRY</button>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function renderHostDashboard() {
+            const container = document.getElementById('hostContainer');
+            container.innerHTML = '';
+            const hosted = currentEvents.filter(x => x.creatorId === currentUser._id);
+
+            if(hosted.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-muted);">No events hosted.</div>';
+                return;
+            }
+
+            hosted.forEach(event => {
+                const count = event.attendees ? event.attendees.length : 0;
+                const html = `
+                    <div class="card" onclick="openHostDetail('${event._id}')">
+                        <h3>${event.title}</h3>
+                        <div class="meta">Guest List: ${count}</div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // --- Actions ---
+        function handleSearch(val) { currentSearch = val.toLowerCase(); renderFeed(); }
+        function applyFilter(val) { currentFilter = val; renderFeed(); }
+
+        async function handleCreate(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerText = '...';
+            
+            // Construct FormData from clean inputs
+            const formData = new FormData();
+            formData.append('title', document.getElementById('cName').value);
+            formData.append('category', document.getElementById('cCategory').value);
+            formData.append('description', document.getElementById('cDesc').value);
+            formData.append('date', document.getElementById('cDate').value);
+            formData.append('time', document.getElementById('cTime').value);
+            formData.append('location', document.getElementById('cLoc').value);
+            formData.append('price', document.getElementById('cPrice').value || 0);
+            formData.append('maxAttendees', document.getElementById('cMax').value || 100);
+            formData.append('mode', 'offline');
+
+            try {
+                const res = await FidaAPI.events.create(formData);
+                if(res.success) {
+                    document.getElementById('createModal').classList.add('hidden');
+                    e.target.reset();
+                    fetchAndRenderFeed();
+                    showToast('Drop Created');
+                } else showToast('Error');
+            } catch(err) { console.log(err); }
+            btn.innerText = 'PUBLISH';
+        }
+
+        async function joinClub(id) {
+            try {
+                const res = await FidaAPI.events.join(id);
+                if(res.success) {
+                    joinedEventIds.push(id);
+                    showToast('Joined');
+                    document.getElementById('detailsModal').classList.add('hidden');
+                    fetchAndRenderFeed();
+                } else showToast(res.error || 'Failed');
+            } catch(e) { console.log(e); }
+        }
+
+        // --- Modals & Details ---
+        function openDetail(id) {
+            const event = currentEvents.find(e => (e._id || e.id) === id);
+            const isJoined = joinedEventIds.includes(id);
+            const content = document.getElementById('detailsContent');
+            
+            content.innerHTML = `
+                <h2 style="margin-bottom:10px;">${event.title}</h2>
+                <div class="meta" style="margin-bottom:20px;">${event.location} • ${event.date}</div>
+                <p style="color:var(--text-muted); margin-bottom:20px;">${event.description}</p>
+                ${ !isJoined ? `<button class="btn" onclick="joinClub('${id}')">GET PASS ($${event.price||0})</button>` : `<button class="btn outline" disabled>ALREADY JOINED</button>` }
+            `;
+            document.getElementById('detailsModal').classList.remove('hidden');
+        }
+
+        function openHostDetail(id) {
+            const event = currentEvents.find(e => (e._id || e.id) === id);
+            document.getElementById('hostDetailContent').innerHTML = `
+                <h2>${event.title}</h2>
+                <div class="meta">Attendees: ${event.attendees ? event.attendees.length : 0}</div>
+                <p style="margin-top:10px;">To scan tickets, use the SCAN QR button in the main Host tab.</p>
+            `;
+            document.getElementById('hostDetailModal').classList.remove('hidden');
+        }
+
+        // --- QR & Scanner (Simplified) ---
+        function showUserQR(eventId, title) {
+            const target = document.getElementById('qrModalTarget');
+            target.innerHTML = '';
+            document.getElementById('qrPassTitle').innerText = title;
+            document.getElementById('qrPassUser').innerText = currentUser.name;
+            
+            new QRCode(target, {
+                text: `${eventId}-${currentUser._id}`,
+                width: 200, height: 200
+            });
+            document.getElementById('qrDisplayModal').classList.remove('hidden');
+        }
+
+        function startScanner() {
+            document.getElementById('scannerModal').classList.remove('hidden');
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
+        }
+
+        function stopScanner() {
+            if(html5QrcodeScanner) html5QrcodeScanner.stop().then(() => html5QrcodeScanner.clear());
+            document.getElementById('scannerModal').classList.add('hidden');
+        }
+
+        function onScanSuccess(decodedText) {
+            html5QrcodeScanner.pause();
+            document.getElementById('scannerModal').classList.add('hidden');
+            
+            // Format: EventID-UserID
+            const [eid, uid] = decodedText.split('-');
+            const event = currentEvents.find(e => (e._id || e.id) === eid);
+
+            const resultModal = document.getElementById('scanResultModal');
+            const statusEl = document.getElementById('scanStatus');
+            const nameEl = document.getElementById('scanName');
+            
+            resultModal.classList.remove('hidden');
+
+            if(event && event.creatorId === currentUser._id) {
+                statusEl.innerText = "ACCESS GRANTED";
+                statusEl.style.color = "var(--accent)";
+                nameEl.innerText = `ID: ${uid.substring(0,8)}...`;
+            } else {
+                statusEl.innerText = "DENIED";
+                statusEl.style.color = "red";
+                nameEl.innerText = "Invalid Event or Wrong Host";
+            }
+        }
+
+        // --- Profile ---
+        async function loadProfileData() {
+           try {
+               const details = await FidaAPI.profile.loadDetails(); // Mocked in script.js
+               if(details) {
+                   document.getElementById('pName').value = currentUser.name || '';
+                   document.getElementById('pEmail').value = currentUser.email || '';
+                   document.getElementById('pPhone').value = details.phone || '';
+                   document.getElementById('pCity').value = details.city || '';
+               }
+           } catch(e) {}
+        }
+        
+        async function saveProfile(e) {
+            e.preventDefault();
+            // Just visual feedback, API call would go here
+            showToast('Profile Saved');
+        }
+
+        // --- Utils ---
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 2000);
+        }
+        function formatDate(d) { return new Date(d).toLocaleDateString(); }
+
+    </script>
+</body>
+</html>
