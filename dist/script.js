@@ -231,7 +231,7 @@ function renderFeed() {
                     <div class="ticket-rip"><div class="rip-line"></div></div>
                     <div class="ticket-stub">
                         <div class="stub-code">129394</div>
-                        <button class="btn-action ${isSoldOut && !isJoined ? 'sold-out' : ''}" onclick="event.stopPropagation(); ${isJoined ? `openDetail('${id}')` : `joinClub('${id}')`}">
+                        <button ${isSoldOut && !isJoined ? 'disabled' : ''} class="btn-action ${isSoldOut && !isJoined ? 'sold-out' : ''}" onclick="event.stopPropagation(); ${isJoined ? `openDetail('${id}')` : `joinClub('${id}')`}">
                              ${isJoined ? 'GOT PASS' : (isSoldOut ? 'FULL' : 'GET PASS')}
                         </button>
                     </div>

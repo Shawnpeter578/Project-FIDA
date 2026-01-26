@@ -1,14 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
-const jwt = require('jsonwebtoken');
 
-const SECRET_KEY = process.env.JWT_SECRET || "default_test_secret"; // Fallback for testing
+const { dbUrl, cloud_name, api_key, api_secret } = require('./config/config.js');
+const { verifyGoogleToken } = require('./auth/google.auth.js');
+const { authenticateJWT, signTokenJWT } = require('./auth/middleware.js');
+
 
 //=============
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const dbUrl = process.env.DATABASE_URL || "mongodb://localhost:27017";
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');//loaded dbUrl
 const DATABASE_NAME = "clubspot";
 const client = new MongoClient(dbUrl, {
     serverApi: {
@@ -25,9 +25,9 @@ let eventsCollection;
 //Cloudinary config ==========
 const cloudinary = require('cloudinary').v2;
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "Chris's cloud",
-  api_key: process.env.CLOUDINARY_API_KEY || "cloudy and a chance of meatballs",
-  api_secret: process.env.CLOUDINARY_API_SECRET || "jimmy"
+  cloud_name: cloud_name,
+  api_key: api_key,
+  api_secret: api_secret
 });
 async function uploadImageQuick(imageBinary) {
     try {
@@ -53,7 +53,7 @@ async function uploadImageQuick(imageBinary) {
 }
 //=================
 
-//Multer configuration
+//Multer configuration==========
 const multer = require('multer');
 const storage = multer.memoryStorage(); // Store file in memory
 const upload = multer({ 
@@ -65,23 +65,16 @@ const upload = multer({
 });
 //===================
 
-// --- Google Auth Setup ---
-const { OAuth2Client } = require('google-auth-library');
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "YOUR_WEB_CLIENT_ID";
-const g_client = new OAuth2Client(GOOGLE_CLIENT_ID);
-
-
 
 const app = express();
 
 
 app.use(cors({
   origin: [
-    'http://localhost:5173',      // Your local dev URL
-    'http://localhost:3000',      // Alternative local URL
-    'https://independent-irita-clubspot-9e43f2fa.koyeb.app/api', // Your production URL
+    'http://localhost:5173',
+    'http://localhost:3000',  
+    'https://independent-irita-clubspot-9e43f2fa.koyeb.app/api',//production url
   ],
-  // credentials: true, // Not strictly needed for Header-based auth, but harmless to keep
   methods: ['POST', 'PUT', 'GET', 'OPTIONS', 'HEAD', 'DELETE'],
 }));
 
@@ -119,37 +112,10 @@ async function closeMongoDB() {
     await client.close();
 }
 
-async function verifyGoogleToken(token) {
-    const ticket = await g_client.verifyIdToken({
-         idToken: token,
-         // The Gatekeeper shall now open for both the Web Lords and the Android Knights
-         audience: [GOOGLE_CLIENT_ID],  
-    });
-    return ticket.getPayload();
-}
 
 
-// --- UPDATED AUTH MIDDLEWARE (HEADER BASED) ---
-const authenticateJWT = (req, res, next) => {
-    // 1. Check for Authorization header
-    const authHeader = req.headers['authorization'];
-    
-    // 2. Format is usually "Bearer <token>"
-    const token = authHeader && authHeader.split(' ')[1];
 
-    if (!token) {
-        return res.status(401).json({ error: "Unauthorized: No token provided" });
-    }
 
-    try {
-        const decoded = jwt.verify(token, SECRET_KEY);
-        req.userId = decoded.userId; 
-        req.userName = decoded.name; 
-        next();
-    } catch (e) {
-        return res.status(403).json({ error: "Forbidden: Invalid token" });
-    }
-};
 
 // ==========================================
 // API Routes
@@ -174,8 +140,8 @@ app.post('/api/auth/google', async (req, res) => {
 
         const user = result.value || result; 
 
-        // Generate JWT
-        const token = jwt.sign({ userId: user._id, name: user.name }, SECRET_KEY, { expiresIn: '365d' });
+        // Generate JWT 
+        const token = signTokenJWT(user._id, user.name);
 
         // CHANGED: Instead of setting a cookie, we send the token back in the JSON
         res.status(200).json({ 
@@ -198,6 +164,7 @@ app.post('/api/auth/logout', (req, res) => {
     // No cookie to clear server-side needed for JWT (unless using a blacklist)
     res.status(200).json({ success: true, message: "Logged out successfully" });
 });
+
 app.get('/api/auth/me', authenticateJWT, async (req, res) => {
     try {
         const user = await usersCollection.findOne(
