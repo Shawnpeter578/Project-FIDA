@@ -147,6 +147,17 @@
             padding: 10px 20px; font-weight: bold;
             display: none; z-index: 9999;
         }
+        .crop-container {
+            width: 100%;  /* Set the desired width of the cropped area */
+            height: 300px; /* Set the desired height of the cropped area */
+            overflow: hidden; /* Ensures any part of the image outside the container is hidden */
+        }
+        .crop-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Scales the image to cover the entire container */
+            object-position: center; /* Centers the image within the container (default) */
+        }
     </style>
 </head>
 <body>
@@ -391,7 +402,7 @@
             );
             if (currentFilter !== 'ALL') filtered = filtered.filter(item => item.category === currentFilter);
 
-            if(filtered.length === 0) {
+            if(filtered.length === 0) { //case no events
                 container.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:20px;">No Signals.</div>';
                 return;
             }
@@ -405,6 +416,10 @@
                 // Minimalist Card
                 const html = `
                     <div class="card ${isJoined ? 'status-joined' : ''}" onclick="openDetail('${id}')">
+                        
+                        <div class="crop-container">
+                            <img src=${event.image}></img>
+                        </div>
                         <div style="display:flex; justify-content:space-between;">
                             <h3>${event.title}</h3>
                             <span style="color:var(--accent); font-weight:700;">${price}</span>
@@ -413,6 +428,7 @@
                             <span>${formatDate(event.date)}</span>
                             <span>${event.time}</span>
                             <span class="tag">${event.category || 'EVENT'}</span>
+                            <span class="tag">${event.creatorName || 'Unknown'}</span>
                         </div>
                         <div style="margin-top:8px; color:var(--text-muted); font-size:0.9rem;">${event.location}</div>
                     </div>
@@ -486,6 +502,7 @@
             formData.append('price', document.getElementById('cPrice').value || 0);
             formData.append('maxAttendees', document.getElementById('cMax').value || 100);
             formData.append('mode', 'offline');
+            formData.append('mode', 'https://images.unsplash.com/photo-1540575467063-178a50c2df87');
 
             try {
                 const res = await FidaAPI.events.create(formData);
@@ -519,7 +536,7 @@
             
             content.innerHTML = `
                 <h2 style="margin-bottom:10px;">${event.title}</h2>
-                <div class="meta" style="margin-bottom:20px;">${event.location} • ${event.date}</div>
+                <div class="meta" style="margin-bottom:20px;">${event.location} • ${event.date} \n• ${event.creatorName} • Joined: ${event.attendees.length}/${event.maxAttendees}</div>
                 <p style="color:var(--text-muted); margin-bottom:20px;">${event.description}</p>
                 ${ !isJoined ? `<button class="btn" onclick="joinClub('${id}')">GET PASS ($${event.price||0})</button>` : `<button class="btn outline" disabled>ALREADY JOINED</button>` }
             `;

@@ -207,7 +207,7 @@ app.post('/api/events', authenticateJWT, upload.single('image'), // Handle singl
         const creatorId = req.userId;
         const creatorName = req.userName;
         const maxAttendees = parseInt(req.body.maxAttendees, 10);
-        let imageUrl = "chris.jpg";
+        let imageUrl = "https://images.unsplash.com/photo-1540575467063-178a50c2df87";
 
         if (!title || !date) {
             return res.status(400).json({ error: "Missing required fields" });
@@ -232,7 +232,7 @@ app.post('/api/events', authenticateJWT, upload.single('image'), // Handle singl
             price: parseFloat(price), 
             creatorId, 
             creatorName, 
-            image: imageUrl,
+            image: imageUrl || ,
             attendees: [],
             comments: [],
             createdAt: new Date(),
