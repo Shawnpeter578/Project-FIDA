@@ -37,7 +37,11 @@ router.post('/', authenticateJWT, upload.single('image'), async (req, res) => {
         // Logic: Handle "Infinity" attendees safely
         let maxAttendees = req.body.maxAttendees;
         if (maxAttendees === 'Infinity') {
+<<<<<<< HEAD
             maxAttendees = 8000000000; 
+=======
+            maxAttendees = Infinity; 
+>>>>>>> 1bcb82ba67ce002642a9633b5b71dcc091e11f0e
         } else {
             maxAttendees = parseInt(maxAttendees, 10);
         }

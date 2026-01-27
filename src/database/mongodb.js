@@ -1,7 +1,11 @@
 const { dbUrl  } = require('../config/config.js');
 //=============
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');//loaded dbUrl
+<<<<<<< HEAD
 const DATABASE_NAME = "clubspot";
+=======
+const DATABASE_NAME = "OSS";
+>>>>>>> 1bcb82ba67ce002642a9633b5b71dcc091e11f0e
 const client = new MongoClient(dbUrl, {
     serverApi: {
         version: ServerApiVersion.v1,
