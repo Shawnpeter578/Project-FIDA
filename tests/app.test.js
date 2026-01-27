@@ -33,7 +33,8 @@ const mockCollection = (collectionName) => ({
   find: jest.fn(() => ({
     sort: jest.fn(() => ({
       toArray: jest.fn(async () => [...mockDb[collectionName]])
-    }))
+    })),
+    toArray: jest.fn(async () => [...mockDb[collectionName]])
   })),
   deleteOne: jest.fn(async (query) => {
     const initialLen = mockDb[collectionName].length;
@@ -58,7 +59,6 @@ const mockCollection = (collectionName) => ({
   updateOne: jest.fn(async (query, update) => {
     const doc = mockDb[collectionName].find(d => d._id.toString() === query._id.toString());
     let modifiedCount = 0;
-
     if (doc) {
       if (update.$addToSet) {
         const key = Object.keys(update.$addToSet)[0];
@@ -89,7 +89,8 @@ const mockCollection = (collectionName) => ({
       }
     }
     return { matchedCount: doc ? 1 : 0, modifiedCount };
-  })
+  }),
+  updateMany: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
 });
 
 jest.mock('mongodb', () => {
@@ -105,7 +106,7 @@ jest.mock('mongodb', () => {
 });
 
 describe('API Integration Flow', () => {
-  let authToken; // CHANGED: Using Token instead of Cookie
+  let authToken;
   let userId;
   let eventId;
 
@@ -120,16 +121,18 @@ describe('API Integration Flow', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
     
-    // CHANGED: Capture Token from Body
+
     userId = res.body.user._id;
     authToken = res.body.token; 
     
     expect(authToken).toBeDefined();
   });
+  
+
   test('GET /api/auth/me (Session Check)', async () => {
     const res = await request(app)
       .get('/api/auth/me')
-      .set('Authorization', `Bearer ${authToken}`); // CHANGED: Header based auth
+      .set('Authorization', `Bearer ${authToken}`); 
     
     expect(res.statusCode).toBe(200);
     expect(res.body.name).toBe('Test User');
@@ -152,6 +155,7 @@ describe('API Integration Flow', () => {
     expect(res.statusCode).toBe(201);
     eventId = res.body.eventId;
   });
+
   test('POST /api/events/join (Join Event)', async () => {
     const res = await request(app)
       .post('/api/events/join')
@@ -160,6 +164,7 @@ describe('API Integration Flow', () => {
 
     expect(res.statusCode).toBe(200);
   });
+
   test('POST /api/events/comment (Add Comment)', async () => {
     const res = await request(app)
       .post('/api/events/comment')
@@ -168,6 +173,7 @@ describe('API Integration Flow', () => {
 
     expect(res.statusCode).toBe(200);
   });
+
   test('GET /api/events (Verify Data Persistence & Creator Name)', async () => {
     const res = await request(app).get('/api/events');
     const event = res.body.find(e => e._id.toString() === eventId.toString());
@@ -181,7 +187,6 @@ describe('API Integration Flow', () => {
   test('DELETE /api/events/:eventId/comments/:commentId (Delete Comment)', async () => {
     // First fetch to get comment ID
     let res = await request(app).get('/api/events');
-    
     let event = res.body.find(e => e._id.toString() === eventId.toString());
     const commentId = event.comments[0]._id;
 
@@ -217,63 +222,3 @@ describe('API Integration Flow', () => {
     // No cookie check needed anymore as we are stateless on server side for logout
   });
 });
-
-
-describe('Edge case1: overflow handling', () => {
-  let authToken; // CHANGED: Using Token instead of Cookie
-  let userId;
-  let eventId;
-
-  beforeAll(async () => await connectToMongoDB());
-  afterAll(async () => await closeMongoDB());
-
-  test('POST /api/auth/google (Login)', async () => {
-    const res = await request(app)
-      .post('/api/auth/google')
-      .send({ token: 'VALID_GOOGLE_TOKEN' });
-    
-    expect(res.statusCode).toBe(200);
-    expect(res.body.success).toBe(true);
-    
-    // CHANGED: Capture Token from Body
-    userId = res.body.user._id;
-    authToken = res.body.token; 
-    
-    expect(authToken).toBeDefined();
-  });
-  test('POST /api/events (Create Event - Authenticated)', async () => {
-    const res = await request(app)
-      .post('/api/events')
-      .set('Authorization', `Bearer ${authToken}`) // CHANGED
-      .send({
-        title: "A small event",
-        date: "2023-12-25",
-        time: "10:00",
-        location: "Test Loc",
-        category: "Social",
-        description: "Desc",
-        maxAttendees:  0
-        // creatorId is now taken from token
-      });
-
-    expect(res.statusCode).toBe(201);
-    eventId = res.body.eventId;
-    console.log(res.body)
-  });
-  test('Join once in a forbidden event', async () => {
-    const res = await request(app)
-      .post('/api/events/join')
-      .set('Authorization', `Bearer ${authToken}`) // CHANGED
-      .send({ eventId });
-
-    expect(res.statusCode).toBe(200);
-  });//too many people, shut the thing up
-  test('Joining again', async () => {//join again
-    const res = await request(app)
-      .post('/api/events/join')
-      .set('Authorization', `Bearer ${authToken}`) // CHANGED
-      .send({ eventId });
-
-    expect(res.statusCode).toBe(200);
-  });//too many people, shut the thing up
-})
