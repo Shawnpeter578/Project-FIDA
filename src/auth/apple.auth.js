@@ -1,1 +1,2 @@
-ECHO is on.
+// Apple Auth module - currently disabled/placeholder
+module.exports = {};

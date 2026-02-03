@@ -7,9 +7,9 @@ const { uploadImageQuick } = require('./database/cloudinary');
 const { authenticateJWT } = require('./auth/middleware');
 const multer = require('multer');
 
-// Multer Config (Local to this file because only events use it)
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage, limits: { fileSize: 5 * 1024 * 1024 } });
+// Multer Config (Use disk storage to avoid memory issues)
+const fs = require('fs');
+const upload = multer({ dest: 'uploads/', limits: { fileSize: 5 * 1024 * 1024 } });
 
 // ==============================================================================
 // GET PATHS
@@ -18,7 +18,15 @@ const upload = multer({ storage: storage, limits: { fileSize: 5 * 1024 * 1024 } 
 router.get('/', async (req, res) => {
     try {
         const eventsCollection = getEventsCollection();
-        const events = await eventsCollection.find({}).toArray();
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        const events = await eventsCollection.find({})
+            .skip(skip)
+            .limit(limit)
+            .toArray();
+
         res.status(200).json(events);
     } catch (e) {
         res.status(500).json({ error: "Fetch failed" });
@@ -31,26 +39,36 @@ router.get('/', async (req, res) => {
 
 router.post('/', authenticateJWT, upload.single('image'), async (req, res) => {
     try {
+        if (req.userRole !== 'organizer') {
+            if (req.file) fs.unlinkSync(req.file.path);
+            return res.status(403).json({ error: "Only organizers can create events" });
+        }
+
         const eventsCollection = getEventsCollection();
-        const { title, description, date, time, location, price, mode, category } = req.body;
+        const { title, description, date, time, location, price, mode, category, allowArtistApplications } = req.body;
         
         // Logic: Handle "Infinity" attendees safely
         let maxAttendees = req.body.maxAttendees;
         if (maxAttendees === 'Infinity') {
             maxAttendees = 8000000000; 
-
         } else {
             maxAttendees = parseInt(maxAttendees, 10);
+            if (isNaN(maxAttendees)) maxAttendees = 100;
         }
 
-        if (!title || !date) return res.status(400).json({ error: "Missing required fields" });
+        if (!title || !date) {
+            if (req.file) fs.unlinkSync(req.file.path);
+            return res.status(400).json({ error: "Missing required fields" });
+        }
         
         // Logic: Image Upload
         let imageUrl = "chris.jpg";
         if (req.file) {
-            const imageBuffer = req.file.buffer;
-            const imageBase64 = `data:${req.file.mimetype};base64,${imageBuffer.toString('base64')}`;
-            imageUrl = await uploadImageQuick(imageBase64);
+            try {
+                imageUrl = await uploadImageQuick(req.file.path);
+            } finally {
+                if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+            }
         }
         
         const newEvent = {
@@ -60,7 +78,10 @@ router.post('/', authenticateJWT, upload.single('image'), async (req, res) => {
             creatorId: req.userId, 
             creatorName: req.userName, 
             image: imageUrl,
-            attendees: [], comments: [], createdAt: new Date(), checkedIn: []
+            attendees: [], comments: [], createdAt: new Date(), checkedIn: [],
+            allowArtistApplications: allowArtistApplications === 'true' || allowArtistApplications === true,
+            artistApplications: [],
+            confirmedArtists: []
         };
 
         const result = await eventsCollection.insertOne(newEvent);
@@ -71,8 +92,43 @@ router.post('/', authenticateJWT, upload.single('image'), async (req, res) => {
     }
 });
 
+router.post('/checkin', authenticateJWT, async (req, res) => {
+    try {
+        const eventsCollection = getEventsCollection();
+        const { eventId, userName } = req.body;
+        
+        if (!eventId || !userName) {
+            return res.status(400).json({ error: "Missing eventId or userName" });
+        }
+
+        const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) });
+        if (!event) return res.status(404).json({ error: "Event not found" });
+
+        // Allow Organizer Role OR the Event Creator
+        if (req.userRole !== 'organizer' && event.creatorId !== req.userId) {
+            return res.status(403).json({ error: "Unauthorized" });
+        }
+
+        const result = await eventsCollection.updateOne(
+            { _id: new ObjectId(eventId), "attendees.name": userName },
+            { $set: { "attendees.$.status": "checked-in" } }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ error: "Guest not found" });
+        }
+
+        res.status(200).json({ success: true, message: `Checked in ${userName}` });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Check-in failed" });
+    }
+});
+
 router.post('/join', authenticateJWT, async (req, res) => {
     try {
+        if (req.userRole !== 'user') return res.status(403).json({ error: "Only users can join events" });
+
         const usersCollection = getUsersCollection();
         const eventsCollection = getEventsCollection();
         const userId = req.userId; 
@@ -85,10 +141,19 @@ router.post('/join', authenticateJWT, async (req, res) => {
                 _id: new ObjectId(eventId),
                 // BUG FIX: Removed $toInt crash. Direct comparison is safer.
                 $expr: { $lt: [{ $size: "$attendees" }, "$maxAttendees"] },
-                attendees: { $ne: userId },
+                "attendees.userId": { $ne: userId },
                 creatorId: { $ne: userId }
             },
-            { $addToSet: { attendees: userId } }
+            { 
+                $push: { 
+                    attendees: { 
+                        userId, 
+                        name: req.userName, 
+                        status: 'pending',
+                        joinedAt: new Date()
+                    } 
+                } 
+            }
         );
 
         if (eventUpdate.matchedCount === 0) return res.status(400).json({ error: "Can't join: Full, joined, or owner." });
@@ -102,6 +167,53 @@ router.post('/join', authenticateJWT, async (req, res) => {
     } catch (e) { 
         console.error(e);
         res.status(500).json({ error: "Join failed" });
+    }
+});
+
+router.post('/apply', authenticateJWT, async (req, res) => {
+    try {
+        if (req.userRole !== 'artist') return res.status(403).json({ error: "Only artists can apply" });
+
+        const eventsCollection = getEventsCollection();
+        const usersCollection = getUsersCollection();
+        const userId = req.userId;
+        const { eventId } = req.body;
+
+        if (!eventId) return res.status(400).json({ error: "Missing Event ID" });
+
+        const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) });
+        if (!event) return res.status(404).json({ error: "Event not found" });
+
+        if (!event.allowArtistApplications) {
+            return res.status(400).json({ error: "This event does not accept artist applications" });
+        }
+
+        // Check if already applied
+        const alreadyApplied = event.artistApplications && event.artistApplications.some(app => app.artistId === userId);
+        if (alreadyApplied) return res.status(400).json({ error: "Already applied" });
+
+        const application = {
+            artistId: userId,
+            artistName: req.userName,
+            status: 'pending',
+            appliedAt: new Date()
+        };
+
+        await eventsCollection.updateOne(
+            { _id: new ObjectId(eventId) },
+            { $push: { artistApplications: application } }
+        );
+
+        // Optional: Update user's appliedEvents
+        await usersCollection.updateOne(
+            { _id: new ObjectId(userId) },
+            { $addToSet: { appliedEvents: eventId } }
+        );
+
+        res.status(200).json({ success: true, message: "Application submitted" });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Application failed" });
     }
 });
 

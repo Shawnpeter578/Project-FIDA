@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        if (!localStorage.getItem('fida_token')) {
+            window.location.href = 'login.html';
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>GigByCity | Ultra UI</title>
@@ -11,7 +16,6 @@
 
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <link rel="stylesheet" href="style.css">
 
@@ -49,27 +53,6 @@
 
       <button class="btn-main" style="width: 80%; max-width: 300px;" onclick="nextOnboarding()">NEXT</button>
       <button style="margin-top: 16px; background: none; border: none; font-weight: 700; color: var(--text-muted); cursor: pointer;" onclick="closeOnboarding()">SKIP</button>
-  </div>
-
-  <div id="authScreen" class="auth-wrap hide">
-    <div class="auth-bg">
-        <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2069&auto=format&fit=crop" alt="Abstract Office">
-        <div class="auth-overlay"></div>
-    </div>
-    <div class="auth-card">
-        <div class="auth-header">
-            <div class="auth-logo">FIDA</div>
-            <p id="authSubtitle" style="color:var(--text-sec); font-size:1.1rem; font-weight:500;">Access the grid.</p>
-        </div>
-        
-        <div style="margin-top: 30px; margin-bottom: 20px;">
-            <div id="googleBtnContainer"></div>
-        </div>
-
-        <p style="text-align:center; font-size:0.8rem; color:var(--text-muted); line-height:1.5;">
-            By entering the system, you agree to the<br>Protocol Standards & Data Policy.
-        </p>
-    </div>
   </div>
 
   <header class="app-header">
@@ -232,10 +215,10 @@
         <div class="dock-item" onclick="switchView('passes', this)">
             <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
         </div>
-        <div class="dock-fab" onclick="openCreateModal()">
+        <div class="dock-fab" id="createBtn" onclick="openCreateModal()" style="display: none;">
             <svg class="icon" viewBox="0 0 24 24" style="stroke:white;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         </div>
-        <div class="dock-item" onclick="switchView('host', this)">
+        <div class="dock-item" id="hostTab" onclick="switchView('host', this)" style="display: none;">
             <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
         </div>
         <div class="dock-item" onclick="switchView('settings', this)">
@@ -503,49 +486,17 @@
         document.querySelectorAll('.overlay').forEach(o => {
             o.addEventListener('click', e => { if (e.target === o) o.classList.remove('visible'); });
         });
-
-        // Google Auth Init
-        if(window.google) {
-            google.accounts.id.initialize({
-                client_id: "611302719944-4fn2hr7i1l9tn2chvu9719pngbcpgrau.apps.googleusercontent.com", 
-                callback: handleGoogleResponse
-            });
-            const btnContainer = document.getElementById("googleBtnContainer");
-            if(btnContainer) {
-                google.accounts.id.renderButton(
-                    btnContainer,
-                    { theme: "outline", size: "large", width: "100%", shape: "pill" }
-                );
-            }
-        }
         
         checkAuth();
     });
 
     // --- AUTHENTICATION FLOW ---
 
-    async function handleGoogleResponse(response) {
-        try {
-            const data = await FidaAPI.auth.googleLogin(response.credential);
-            
-            if(data.success) {
-                localStorage.setItem('fida_token', data.token);
-                showToast(`Welcome, ${data.user.name}`);
-                checkAuth();
-            } else {
-                showToast('Login Failed');
-            }
-        } catch(e) {
-            console.error(e);
-            showToast('Connection Error');
-        }
-    }
-
     async function checkAuth() {
         const token = localStorage.getItem('fida_token');
         
         if (!token) {
-            showAuthScreen();
+            window.location.href = 'login.html';
             return;
         }
 
@@ -554,7 +505,6 @@
             currentUser = user;
             joinedEventIds = currentUser.joinedEvents || []; 
                 
-            hideAuthScreen();
             updateUserUI();
             fetchAndRenderFeed();
             
@@ -567,20 +517,15 @@
 
         } catch (e) {
             console.error("Auth check failed", e);
-            if(e.message === 'Session invalid') logout();
-            else showAuthScreen();
+            logout();
         }
     }
-
-    function showAuthScreen() { document.getElementById('authScreen').classList.remove('hide'); }
-    function hideAuthScreen() { document.getElementById('authScreen').classList.add('hide'); }
 
     function logout() {
         localStorage.removeItem('fida_token');
         currentUser = null;
         joinedEventIds = [];
-        showAuthScreen();
-        location.reload(); 
+        window.location.href = 'login.html';
     }
 
 
@@ -662,6 +607,17 @@
         // Settings/Profile Page Updates
         document.getElementById('settingsAvatarDisplay').innerHTML = avatarImg;
         
+        // Role-based UI logic
+        const createBtn = document.getElementById('createBtn');
+        const hostTab = document.getElementById('hostTab');
+        if (currentUser.role === 'organizer') {
+            createBtn.style.display = 'flex';
+            hostTab.style.display = 'flex';
+        } else {
+            createBtn.style.display = 'none';
+            hostTab.style.display = 'none';
+        }
+
         // Load detailed form data
         loadProfileData();
     }

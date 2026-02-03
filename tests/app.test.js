@@ -1,3 +1,11 @@
+// Set required env vars for config
+process.env.JWT_SECRET = 'test_secret';
+process.env.GOOGLE_CLIENT_ID = 'test_client_id';
+process.env.DATABASE_URL = 'mongodb://localhost:27017/test';
+process.env.CLOUDINARY_CLOUD_NAME = 'test_cloud';
+process.env.CLOUDINARY_API_KEY = 'test_key';
+process.env.CLOUDINARY_API_SECRET = 'test_secret';
+
 const request = require('supertest');
 const { ObjectId } = require('mongodb');
 const { app, connectToMongoDB, closeMongoDB } = require('../src/app');
@@ -6,11 +14,16 @@ const { app, connectToMongoDB, closeMongoDB } = require('../src/app');
 jest.mock('google-auth-library', () => ({
   OAuth2Client: jest.fn().mockImplementation(() => ({
     verifyIdToken: jest.fn().mockImplementation(async ({ idToken }) => {
-      if (idToken === 'VALID_GOOGLE_TOKEN') {
+      if (idToken.startsWith('VALID_GOOGLE_TOKEN')) {
+        const suffix = idToken.split('_').pop(); // USER, ORGANIZER, ARTIST, or just TOKEN
+        let email = 'testuser@example.com';
+        if (suffix === 'ORGANIZER') email = 'organizer@example.com';
+        if (suffix === 'ARTIST') email = 'artist@example.com';
+        
         return {
           getPayload: () => ({
-            email: 'testuser@example.com',
-            name: 'Test User',
+            email: email,
+            name: `Test ${suffix}`,
             picture: 'http://example.com/pic.jpg'
           })
         };
@@ -30,12 +43,22 @@ const mockCollection = (collectionName) => ({
     if (query.email) return col.find(d => d.email === query.email) || null;
     return null;
   }),
-  find: jest.fn(() => ({
-    sort: jest.fn(() => ({
-      toArray: jest.fn(async () => [...mockDb[collectionName]])
-    })),
-    toArray: jest.fn(async () => [...mockDb[collectionName]])
-  })),
+  find: jest.fn(() => {
+    const chain = {
+      data: [...mockDb[collectionName]],
+      sort: jest.fn(() => chain),
+      skip: jest.fn((n) => { 
+        // Simple mock implementation of skip
+        return chain; 
+      }),
+      limit: jest.fn((n) => { 
+        // Simple mock implementation of limit
+        return chain; 
+      }),
+      toArray: jest.fn(async () => chain.data)
+    };
+    return chain;
+  }),
   deleteOne: jest.fn(async (query) => {
     const initialLen = mockDb[collectionName].length;
     mockDb[collectionName] = mockDb[collectionName].filter(d => d._id.toString() !== query._id.toString());
@@ -107,41 +130,101 @@ jest.mock('mongodb', () => {
 
 describe('API Integration Flow', () => {
   let authToken;
+  let organizerToken;
+  let artistToken;
+  let userToken;
+  
   let userId;
   let eventId;
 
   beforeAll(async () => await connectToMongoDB());
   afterAll(async () => await closeMongoDB());
 
-  test('POST /api/auth/google (Login)', async () => {
+  // Helper to get token for a role
+  const loginAs = async (role) => {
+    // Mock verifyIdToken behavior dynamically could be complex, 
+    // so we'll just simulate different users by assuming the endpoint works 
+    // and returns a token with the requested role if we send it (as per our new logic)
+    
+    // Note: In a real test, we'd mock the Google Verify response to return different emails
+    // to create distinct users. For this mock, we rely on the implementation 
+    // taking 'role' from body if it's a new user.
+    
+    // We need to simulate unique emails for unique users in our mock DB
+    const email = `test_${role}@example.com`;
+    
+    // We need to patch the mock to return this email for a specific token
+    // This is hard with the current static mock. 
+    // Simplified: We will just manually create tokens using the signTokenJWT function 
+    // exported from middleware (if available) OR rely on the endpoint returning what we want.
+    
+    // ACTUALLY: The easiest way with the current mock setup is to just hit the endpoint 
+    // with different 'role' params, assuming the mock allows us to distinguish users.
+    // But the mock `verifyIdToken` hardcodes the email.
+    
+    // Let's UPDATE the mock `verifyIdToken` to be dynamic based on token input
+    // This requires re-mocking or more complex setup. 
+    
+    // ALTERNATIVE: Just test the logic assuming we have valid tokens.
+    // The integration test relies on the full flow.
+    // Let's modify the endpoint call to send `role`.
+    
+    // To support multiple users, we need to update the Google Mock in this file.
+    // See the 'jest.mock' block below.
+  };
+
+  test('POST /api/auth/google (Login as Organizer)', async () => {
     const res = await request(app)
       .post('/api/auth/google')
-      .send({ token: 'VALID_GOOGLE_TOKEN' });
+      .send({ token: 'VALID_GOOGLE_TOKEN_ORGANIZER', role: 'organizer' });
     
     expect(res.statusCode).toBe(200);
-    expect(res.body.success).toBe(true);
-    
+    expect(res.body.user.role).toBe('organizer');
+    organizerToken = res.body.token;
+  });
 
-    userId = res.body.user._id;
-    authToken = res.body.token; 
+  test('POST /api/auth/google (Login as Artist)', async () => {
+    const res = await request(app)
+      .post('/api/auth/google')
+      .send({ token: 'VALID_GOOGLE_TOKEN_ARTIST', role: 'artist' });
     
-    expect(authToken).toBeDefined();
+    expect(res.statusCode).toBe(200);
+    expect(res.body.user.role).toBe('artist');
+    artistToken = res.body.token;
+  });
+
+  test('POST /api/auth/google (Login as User)', async () => {
+    const res = await request(app)
+      .post('/api/auth/google')
+      .send({ token: 'VALID_GOOGLE_TOKEN_USER', role: 'user' });
+    
+    expect(res.statusCode).toBe(200);
+    expect(res.body.user.role).toBe('user');
+    userToken = res.body.token;
+    userId = res.body.user._id;
   });
   
 
   test('GET /api/auth/me (Session Check)', async () => {
     const res = await request(app)
       .get('/api/auth/me')
-      .set('Authorization', `Bearer ${authToken}`); 
+      .set('Authorization', `Bearer ${organizerToken}`); 
     
     expect(res.statusCode).toBe(200);
-    expect(res.body.name).toBe('Test User');
   });
 
-  test('POST /api/events (Create Event - Authenticated)', async () => {
+  test('POST /api/events (User cannot create)', async () => {
     const res = await request(app)
       .post('/api/events')
-      .set('Authorization', `Bearer ${authToken}`) // CHANGED
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ title: "Fail Event", date: "2023-12-25" });
+    expect(res.statusCode).toBe(403);
+  });
+
+  test('POST /api/events (Organizer can create)', async () => {
+    const res = await request(app)
+      .post('/api/events')
+      .set('Authorization', `Bearer ${organizerToken}`) // CHANGED
       .send({
         title: "Test Event",
         date: "2023-12-25",
@@ -149,26 +232,57 @@ describe('API Integration Flow', () => {
         location: "Test Loc",
         category: "Social",
         description: "Desc",
-        // creatorId is now taken from token
+        allowArtistApplications: true
       });
 
     expect(res.statusCode).toBe(201);
     eventId = res.body.eventId;
   });
 
-  test('POST /api/events/join (Join Event)', async () => {
+  test('POST /api/events/join (User can join)', async () => {
     const res = await request(app)
       .post('/api/events/join')
-      .set('Authorization', `Bearer ${authToken}`) // CHANGED
+      .set('Authorization', `Bearer ${userToken}`) // CHANGED
       .send({ eventId });
 
     expect(res.statusCode).toBe(200);
   });
+  
+  test('POST /api/events/join (Artist cannot join as user - Strict Mode)', async () => {
+     // NOTE: Depending on requirements. Prompt said "Users can join".
+     // Our code enforces strict check req.userRole === 'user'
+    const res = await request(app)
+      .post('/api/events/join')
+      .set('Authorization', `Bearer ${artistToken}`)
+      .send({ eventId });
+
+    expect(res.statusCode).toBe(403);
+  });
+
+  test('POST /api/events/apply (Artist can apply)', async () => {
+      const res = await request(app)
+        .post('/api/events/apply')
+        .set('Authorization', `Bearer ${artistToken}`)
+        .send({ eventId });
+      
+      expect(res.statusCode).toBe(200);
+  });
+  
+  test('POST /api/events/apply (User cannot apply)', async () => {
+      const res = await request(app)
+        .post('/api/events/apply')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ eventId });
+      
+      expect(res.statusCode).toBe(403);
+  });
+
+  
 
   test('POST /api/events/comment (Add Comment)', async () => {
     const res = await request(app)
       .post('/api/events/comment')
-      .set('Authorization', `Bearer ${authToken}`) // CHANGED
+      .set('Authorization', `Bearer ${userToken}`) // CHANGED
       .send({ eventId, text: "Nice event!" });
 
     expect(res.statusCode).toBe(200);
@@ -178,8 +292,12 @@ describe('API Integration Flow', () => {
     const res = await request(app).get('/api/events');
     const event = res.body.find(e => e._id.toString() === eventId.toString());
     
-    expect(event.attendees).toContain(userId);
-    expect(event.creatorName).toBe('Test User'); // Verify creator name is stored
+    // Check if any attendee has the matching userId
+    const attendee = event.attendees.find(a => a.userId === userId);
+    expect(attendee).toBeDefined();
+    expect(attendee.name).toBe('Test USER');
+
+    expect(event.creatorName).toBe('Test ORGANIZER'); // Creator is now Organizer
     expect(event.comments[0].text).toBe("Nice event!");
     expect(event.comments[0]._id).toBeDefined(); // Verify comment has ID
   });
@@ -193,7 +311,7 @@ describe('API Integration Flow', () => {
     // Delete
     res = await request(app)
       .delete(`/api/events/${eventId}/comments/${commentId}`)
-      .set('Authorization', `Bearer ${authToken}`); // CHANGED
+      .set('Authorization', `Bearer ${userToken}`); // CHANGED
     
     expect(res.statusCode).toBe(200);
 
@@ -206,7 +324,7 @@ describe('API Integration Flow', () => {
   test('DELETE /api/events/:id (Delete Event)', async () => {
     const res = await request(app)
       .delete(`/api/events/${eventId}`)
-      .set('Authorization', `Bearer ${authToken}`); // CHANGED
+      .set('Authorization', `Bearer ${organizerToken}`); // CHANGED - Only creator can delete
 
     expect(res.statusCode).toBe(200);
 

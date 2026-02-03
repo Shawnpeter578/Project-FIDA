@@ -16,14 +16,15 @@ const authenticateJWT = (req, res, next) => {
         const decoded = jwt.verify(token, JWT_SECRET);
         req.userId = decoded.userId; 
         req.userName = decoded.name; 
+        req.userRole = decoded.role || 'user'; // Default to 'user'
         next();
     } catch (e) {
         return res.status(403).json({ error: "Forbidden: Invalid token" });
     }
 };
 
-const signTokenJWT = (userId, userName) =>{
-	return jwt.sign({ userId: userId, name: userName }, JWT_SECRET, { expiresIn: '365d' });
+const signTokenJWT = (userId, userName, role) =>{
+	return jwt.sign({ userId: userId, name: userName, role: role || 'user' }, JWT_SECRET, { expiresIn: '1h' });
 }
 
 module.exports = {
