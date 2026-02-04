@@ -1,6 +1,7 @@
 {
   "name": "clubapp",
   "version": "1.0.0",
+  "packageManager": "pnpm@^10.0.0",
   "description": "This is for club connectivity",
   "main": "server.js",
   "scripts": {
