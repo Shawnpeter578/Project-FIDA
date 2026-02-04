@@ -1,4 +1,4 @@
-# Proposal: Organizer Dashboard Integration
+w# Proposal: Organizer Dashboard Integration
 
 ## Goal
 Fully functionalize `organizer.html` by connecting it to the backend API, enforcing access control, and implementing feature-rich event management without DB schema changes.
