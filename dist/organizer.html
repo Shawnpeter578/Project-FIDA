@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#F3F4F6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>GigByCity | Pro Console</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+    <!-- QR Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <!-- Cropper.js Library -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+    <style>
+        :root {
+            /* PERMANENT LIGHT THEME */
+            --bg-app: #F3F4F6;
+            --bg-surface: #FFFFFF;
+            --bg-glass: rgba(255, 255, 255, 0.95);
+            
+            --primary: #111827;
+            --primary-inv: #FFFFFF;
+            --accent: #DC2626;
+            --accent-glow: rgba(220, 38, 38, 0.15);
+            
+            --text-main: #111827;
+            --text-sec: #6B7280;
+            --text-ter: #9CA3AF;
+            
+            --border: #E5E7EB;
+            --border-hover: #D1D5DB;
+            --input-bg: #F9FAFB;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-float: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            
+            --nav-height: 70px;
+            --safe-area-bottom: env(safe-area-inset-bottom);
+            --font-body: 'Inter', sans-serif;
+            --font-display: 'Space Grotesk', sans-serif;
+        }
+
+        /* --- Reset & Base --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        
+        body {
+            background: var(--bg-app); color: var(--text-main); font-family: var(--font-body);
+            height: 100vh; overflow: hidden; display: flex; flex-direction: column;
+        }
+
+        /* --- App Shell --- */
+        .app-shell {
+            flex: 1; overflow-y: auto; overflow-x: hidden;
+            padding: 24px; padding-bottom: calc(var(--nav-height) + 30px + var(--safe-area-bottom));
+            scroll-behavior: smooth;
+        }
+        
+        section { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (min-width: 1024px) {
+            body { flex-direction: row; }
+            .app-shell { padding: 40px 60px; margin-left: 280px; padding-bottom: 40px; }
+        }
+
+        /* --- Typography --- */
+        h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; color: var(--text-main); }
+        h1 { font-size: 1.8rem; font-weight: 700; }
+        .text-sec { color: var(--text-sec); }
+        .text-sm { font-size: 0.875rem; }
+
+        /* --- Navigation --- */
+        .nav-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--bg-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            height: calc(var(--nav-height) + var(--safe-area-bottom));
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            align-items: start; padding-top: 10px; z-index: 100;
+        }
+        
+        @media (min-width: 1024px) {
+            .nav-bar {
+                top: 0; bottom: 0; left: 0; width: 280px; right: auto;
+                display: flex; flex-direction: column; justify-content: flex-start;
+                padding: 40px 24px; border-top: none; border-right: 1px solid var(--border);
+                gap: 8px; background: var(--bg-surface);
+            }
+        }
+
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            color: var(--text-ter); background: transparent; border: none;
+            font-size: 0.65rem; font-weight: 600; cursor: pointer; transition: 0.2s;
+        }
+        .nav-item svg { width: 24px; height: 24px; stroke-width: 2px; stroke: currentColor; transition: 0.2s; }
+        
+        .nav-item.active { color: var(--text-main); }
+        .nav-item.active svg { stroke: var(--accent); fill: var(--accent-glow); }
+        
+        @media (min-width: 1024px) {
+            .nav-item {
+                flex-direction: row; font-size: 0.95rem; padding: 12px 16px;
+                border-radius: var(--radius-md); gap: 16px; font-weight: 500;
+            }
+            .nav-item:hover { background: var(--bg-app); color: var(--text-main); }
+            .nav-item.active { background: var(--bg-app); color: var(--text-main); font-weight: 600; }
+            .nav-logo { display: flex !important; margin-bottom: 48px; padding-left: 16px; font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; align-items: center; gap: 10px; }
+            .nav-logo-mark { width: 24px; height: 24px; background: var(--accent); border-radius: 6px; }
+        }
+        .nav-logo { display: none; }
+
+        /* --- Cards & Stats --- */
+        .dash-grid {
+            display: grid; grid-template-columns: 1fr; gap: 16px;
+        }
+        @media (min-width: 768px) { .dash-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 1200px) { .dash-grid { grid-template-columns: repeat(4, 1fr); } }
+
+        .card {
+            background: var(--bg-surface); border-radius: var(--radius-lg);
+            padding: 24px; border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm); position: relative; overflow: hidden;
+            transition: 0.2s;
+        }
+        
+        .stat-val { font-size: 2rem; font-weight: 700; color: var(--text-main); margin: 8px 0 4px; }
+        .stat-label { font-size: 0.85rem; color: var(--text-sec); font-weight: 500; }
+        
+        /* Chart */
+        .chart-container {
+            grid-column: 1 / -1; min-height: 250px; padding-top: 40px;
+            display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
+        }
+        .chart-bar {
+            flex: 1; background: var(--border); border-radius: 6px 6px 0 0;
+            position: relative; transition: height 0.8s; height: 0; min-height: 4px;
+        }
+        .chart-bar.active { background: linear-gradient(180deg, var(--accent) 0%, #991B1B 100%); }
+        .chart-bar .x-label {
+            position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%);
+            font-size: 0.75rem; color: var(--text-ter); font-weight: 500;
+        }
+
+        /* --- Lists --- */
+        .list-card {
+            background: var(--bg-surface); border: 1px solid var(--border);
+            border-radius: var(--radius-md); padding: 16px; margin-bottom: 12px;
+            display: flex; gap: 16px; transition: 0.2s; cursor: pointer; align-items: center;
+        }
+        .list-card:active { transform: scale(0.98); }
+        
+        .list-thumb {
+            width: 60px; height: 60px; border-radius: 12px; object-fit: cover;
+            background: var(--bg-app); border: 1px solid var(--border);
+        }
+        .list-info { flex: 1; }
+        .list-title { font-weight: 600; color: var(--text-main); font-size: 1rem; margin-bottom: 4px; }
+        .list-sub { font-size: 0.8rem; color: var(--text-sec); display: flex; align-items: center; gap: 6px; }
+
+        /* --- Profile Settings UI --- */
+        .profile-header {
+            display: flex; align-items: center; gap: 16px; margin-bottom: 32px;
+            background: var(--bg-surface); padding: 20px; border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+        }
+        .avatar-lg {
+            width: 70px; height: 70px; background: var(--primary); color: var(--primary-inv);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; font-weight: 700;
+        }
+
+        .settings-group {
+            background: var(--bg-surface); border-radius: var(--radius-lg);
+            border: 1px solid var(--border); overflow: hidden; margin-bottom: 24px;
+        }
+        .settings-item {
+            padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--border); cursor: pointer; background: var(--bg-surface);
+            transition: 0.2s;
+        }
+        .settings-item:last-child { border-bottom: none; }
+        .settings-item:hover { background: var(--input-bg); }
+        
+        .item-icon {
+            width: 32px; height: 32px; border-radius: 8px; background: var(--input-bg);
+            color: var(--text-main); display: flex; align-items: center; justify-content: center; margin-right: 12px;
+        }
+        .item-label { font-size: 0.95rem; font-weight: 500; color: var(--text-main); }
+        .item-action { color: var(--text-ter); }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            width: 44px; height: 24px; background: var(--border); border-radius: 100px;
+            position: relative; transition: 0.3s;
+        }
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
+            background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .toggle-switch.active { background: var(--accent); }
+        .toggle-switch.active::after { transform: translateX(20px); }
+
+        /* --- Scanner --- */
+        #scanner-overlay {
+            position: fixed; inset: 0; background: #000; z-index: 200;
+            display: flex; flex-direction: column; opacity: 0; pointer-events: none; transition: 0.3s;
+        }
+        #scanner-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        /* Scanner Visual Guide */
+        .scanner-guide {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 70vw; height: 70vw; max-width: 300px; max-height: 300px;
+            border: 2px solid rgba(255,255,255,0.7); border-radius: 20px;
+            box-shadow: 0 0 0 100vmax rgba(0,0,0,0.5); /* Dim background */
+            pointer-events: none;
+        }
+        .scanner-guide::before {
+            content: ''; position: absolute; inset: -2px; border: 2px solid var(--accent);
+            clip-path: polygon(0 20%, 0 0, 20% 0, 80% 0, 100% 0, 100% 20%, 100% 80%, 100% 100%, 80% 100%, 20% 100%, 0 100%, 0 80%);
+            /* Simplified corners effect using border */
+            border-radius: 20px;
+        }
+
+        .scan-pop {
+            position: absolute; bottom: 100px; left: 20px; right: 20px;
+            background: var(--bg-surface); padding: 24px; border-radius: 24px;
+            text-align: center; transform: translateY(100px); opacity: 0;
+            transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1); pointer-events: none; z-index: 202;
+        }
+        .scan-pop.show { transform: translateY(0); opacity: 1; }
+
+        /* --- Modals --- */
+        .modal-wrap {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+            z-index: 150; display: none; align-items: flex-end; justify-content: center;
+        }
+        .modal-wrap.active { display: flex; }
+        
+        /* New Redesigned Modal Classes */
+        .modal-card {
+            background: var(--bg-surface); width: 100%; max-width: 500px;
+            border-radius: 32px 32px 0 0; 
+            padding: 0;
+            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+            max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+        }
+        
+        /* Phone Optimization for Modal */
+        @media (max-width: 768px) {
+            .modal-card {
+                height: 100vh; /* Full height on mobile */
+                max-height: 100vh;
+                border-radius: 0;
+            }
+            .modal-header {
+                padding-top: max(20px, env(safe-area-inset-top)); /* Handle notch */
+            }
+        }
+        
+        .modal-wrap.active .modal-card { transform: translateY(0); }
+        
+        @media (min-width: 768px) { 
+            .modal-wrap { align-items: center; } 
+            .modal-card { border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); height: auto; } 
+        }
+
+        .modal-header {
+            padding: 16px 24px;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center;
+            position: sticky; top: 0; z-index: 10;
+        }
+        .modal-body {
+            padding: 24px; overflow-y: auto; flex: 1; padding-bottom: 100px;
+        }
+        .modal-footer {
+            padding: 20px 24px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-surface);
+            display: flex; gap: 16px;
+            position: sticky; bottom: 0; z-index: 10;
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+        }
+        
+        .btn-icon {
+            background: transparent; border: none; width: 40px; height: 40px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: var(--text-main); cursor: pointer; margin-right: 12px;
+            transition: 0.2s;
+        }
+        .btn-icon:hover { background: var(--input-bg); }
+
+        .inp-modern {
+            width: 100%; height: 56px;
+            background: var(--input-bg);
+            border: 1px solid transparent;
+            border-radius: 16px;
+            padding: 0 20px;
+            font-size: 1rem; color: var(--text-main);
+            font-family: inherit;
+            transition: 0.2s; font-weight: 500;
+        }
+        .inp-modern:focus {
+            background: var(--bg-surface);
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        
+        .form-group { margin-bottom: 24px; }
+        .form-label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-sec); margin-bottom: 8px; margin-left: 4px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        .btn-primary {
+            width: 100%; height: 50px; background: var(--primary); color: var(--primary-inv);
+            border: none; border-radius: 12px; font-weight: 600; cursor: pointer;
+        }
+        .btn-sec {
+            width: 100%; height: 50px; background: var(--input-bg); color: var(--text-main);
+            border: none; border-radius: 12px; font-weight: 600; cursor: pointer;
+        }
+        
+        /* Legacy inp class for search */
+        .inp {
+            width: 100%; height: 50px; padding: 0 16px; border: 1px solid var(--border);
+            border-radius: 12px; background: var(--input-bg); color: var(--text-main);
+            font-family: inherit; margin-bottom: 16px;
+        }
+
+        /* --- Image Upload & Crop --- */
+        .img-upload-area {
+            width: 100%; height: 200px; 
+            background: linear-gradient(180deg, var(--input-bg) 0%, #ffffff 100%);
+            border: 2px dashed var(--border); border-radius: 20px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: var(--text-sec); cursor: pointer; margin-bottom: 20px;
+            overflow: hidden; position: relative;
+            transition: all 0.3s ease;
+        }
+        .img-upload-area:hover {
+            border-color: var(--accent);
+            background: var(--input-bg);
+        }
+        .img-upload-area img {
+            width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0;
+        }
+        .img-upload-placeholder {
+            z-index: 2; display: flex; flex-direction: column; align-items: center; pointer-events: none;
+        }
+        
+        /* Crop Modal Specific */
+        .crop-container {
+            height: 400px; background: #333; position: relative;
+            margin: -32px -32px 20px -32px;
+        }
+
+        /* --- FAB --- */
+        .fab {
+            position: fixed; bottom: calc(var(--nav-height) + 24px); right: 24px;
+            width: 56px; height: 56px; background: var(--primary); color: var(--primary-inv);
+            border-radius: 18px; display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--shadow-float); z-index: 90; cursor: pointer; transition: 0.2s;
+        }
+        .fab:active { transform: scale(0.9); }
+        @media (min-width: 1024px) { .fab { display: none; } }
+
+    </style>
+</head>
+<body>
+
+    <!-- Nav -->
+    <nav class="nav-bar">
+        <div class="nav-logo">
+            <div class="nav-logo-mark"></div>
+            GigByCity Pro
+        </div>
+        
+        <button class="nav-item active" onclick="switchTab('dashboard', this)">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            Dashboard
+        </button>
+        <button class="nav-item" onclick="switchTab('events', this)">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            Events
+        </button>
+        <button class="nav-item" onclick="toggleScanner()">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10"></rect></svg>
+            Scan
+        </button>
+        <button class="nav-item" onclick="switchTab('guests', this)">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            Guests
+        </button>
+        <button class="nav-item" onclick="switchTab('profile', this)">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Profile
+        </button>
+    </nav>
+
+    <!-- Main -->
+    <main class="app-shell">
+        
+        <!-- DASHBOARD TAB -->
+        <section id="tab-dashboard">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                <h1>Overview</h1>
+                <button onclick="openCreateModal()" class="btn-primary" style="width:auto; padding:0 20px; display:none; @media(min-width:1024px){display:block;}">+ Create</button>
+            </div>
+
+            <div class="dash-grid">
+                <div class="card">
+                    <div class="stat-label">Total Revenue</div>
+                    <div class="stat-val" id="dashRev">$0</div>
+                    <div style="font-size:0.75rem; color:#059669; font-weight:600;">+12.5% this week</div>
+                </div>
+                <div class="card">
+                    <div class="stat-label">Tickets Sold</div>
+                    <div class="stat-val" id="dashTix">0</div>
+                    <div style="font-size:0.75rem; color:var(--text-sec);">Lifetime sales</div>
+                </div>
+                <div class="card chart-container">
+                    <!-- Chart JS -->
+                </div>
+            </div>
+
+            <h3 style="margin: 32px 0 16px;">Recent Updates</h3>
+            <div id="activity-feed"></div>
+        </section>
+
+        <!-- EVENTS TAB -->
+        <section id="tab-events" style="display:none;">
+            <div style="margin-bottom:24px;">
+                <h1>My Events</h1>
+                <p class="text-sec text-sm">Tap an event to manage guests</p>
+            </div>
+            <div id="event-list-container"></div>
+        </section>
+
+        <!-- GUESTS TAB -->
+        <section id="tab-guests" style="display:none;">
+            <div style="margin-bottom:16px;">
+                <h1 id="guest-event-title">All Guests</h1>
+                <p class="text-sec text-sm" id="guest-subtitle">Select an event to filter list</p>
+            </div>
+
+            <input type="text" class="inp" placeholder="Search guests..." onkeyup="filterGuests(this.value)">
+
+            <div id="guest-list-container">
+                <div style="text-align:center; padding: 40px; color:var(--text-ter);">
+                    Select an event from the Events tab to view the guest list.
+                </div>
+            </div>
+        </section>
+
+        <!-- PROFILE TAB -->
+        <section id="tab-profile" style="display:none;">
+            <div style="margin-bottom:24px;">
+                <h1>Profile</h1>
+            </div>
+
+            <div class="profile-header">
+                <div class="avatar-lg">GC</div>
+                <div>
+                    <div style="font-weight:700; font-size:1.1rem;">GigByCity Host</div>
+                    <div class="text-sec text-sm">organizer@gigbycity.com</div>
+                    <div style="font-size:0.75rem; background:var(--accent); color:white; padding:2px 8px; border-radius:4px; display:inline-block; margin-top:4px;">PRO ACCOUNT</div>
+                </div>
+            </div>
+
+            <!-- Removed Notifications Section entirely -->
+
+            <div style="font-size:0.75rem; font-weight:700; color:var(--text-ter); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em; margin-top: 20px;">Company</div>
+            <div class="settings-group">
+                <div class="settings-item" onclick="openAboutModal()">
+                    <div style="display:flex; align-items:center;">
+                        <div class="item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg></div>
+                        <div class="item-label">About GigByCity</div>
+                    </div>
+                    <div class="item-action">v2.1</div>
+                </div>
+                <div class="settings-item">
+                    <div style="display:flex; align-items:center;">
+                        <div class="item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+                        <div class="item-label">Help & Support</div>
+                    </div>
+                    <div class="item-action">→</div>
+                </div>
+                <div class="settings-item" style="border-top: 1px solid var(--border);">
+                    <div style="display:flex; align-items:center; color:var(--accent);">
+                        <div class="item-icon" style="color:var(--accent);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></div>
+                        <div class="item-label" onclick="logout()">Sign Out</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="text-align:center; color:var(--text-ter); font-size:0.75rem; margin-top:20px;">
+                Made by KENBRISELLERIS
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FAB -->
+    <div class="fab" onclick="openCreateModal()">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </div>
+
+    <!-- Create Modal (REDESIGNED) -->
+    <div class="modal-wrap" id="create-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <button onclick="closeModal()" class="btn-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
+                </button>
+                <h2>New Event</h2>
+            </div>
+            
+            <form onsubmit="handleCreate(event)" style="display:flex; flex-direction:column; height:100%;">
+                <div class="modal-body">
+                    <!-- Image Upload UI -->
+                    <div class="form-group">
+                        <label class="form-label">Cover Image</label>
+                        <div class="img-upload-area" onclick="document.getElementById('imgInput').click()">
+                            <img id="preview-final" style="display:none;" />
+                            <div class="img-upload-placeholder" id="upload-placeholder">
+                                <div style="width:48px; height:48px; background:white; border-radius:12px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.05); margin-bottom:12px;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                </div>
+                                <span style="font-size:1rem; font-weight:600;">Upload Photo</span>
+                                <span style="font-size:0.8rem; color:var(--text-ter);">Tap to browse</span>
+                            </div>
+                        </div>
+                        <input type="file" id="imgInput" accept="image/*" hidden onchange="onImageSelect(event)">
+                        <input type="hidden" id="cImgData">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Event Title</label>
+                        <input type="text" id="cTitle" class="inp-modern" placeholder="e.g. Summer Music Festival" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Location</label>
+                        <input type="text" id="cLoc" class="inp-modern" placeholder="e.g. Central Park, NY" required>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Date</label>
+                            <input type="date" id="cDate" class="inp-modern" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Time</label>
+                            <input type="time" id="cTime" class="inp-modern" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Price ($)</label>
+                            <input type="number" id="cPrice" class="inp-modern" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Capacity</label>
+                            <input type="number" id="cMax" class="inp-modern" placeholder="100">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-sec" onclick="closeModal()" style="display:none; @media(min-width:768px){display:block;}">Cancel</button>
+                    <button type="submit" class="btn-primary">Create Event</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CROPPER MODAL -->
+    <div class="modal-wrap" id="crop-modal" style="z-index: 160;">
+        <div class="modal-card" style="padding:24px; height:auto;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+                <h2>Crop Image</h2>
+            </div>
+            
+            <div class="crop-container" style="border-radius:12px; overflow:hidden;">
+                <img id="crop-target" style="max-width: 100%; display: block;">
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button type="button" class="btn-sec" onclick="cancelCrop()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="applyCrop()">Crop & Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ABOUT MODAL (New) -->
+    <div class="modal-wrap" id="about-modal">
+        <div class="modal-card" style="padding:32px; height:auto;">
+            <h2 style="margin-bottom:16px;">About GigByCity</h2>
+            <p style="color:var(--text-sec); line-height:1.6; margin-bottom:24px;">
+                GigByCity is the premier platform for professional event hosts. 
+                Manage your events, track revenue, and streamline guest check-ins all in one place.
+                <br><br>
+                Version: 2.1.0 (Pro Console)
+            </p>
+            <button class="btn-primary" onclick="document.getElementById('about-modal').classList.remove('active')">Close</button>
+        </div>
+    </div>
+
+    <!-- Scanner -->
+    <div id="scanner-overlay">
+        <div id="reader" style="width:100%; height:100%; object-fit:cover;"></div>
+        <div class="scanner-guide"></div>
+        <div style="position:absolute; top:40px; right:20px; z-index:201;">
+            <button onclick="toggleScanner()" style="background:rgba(255,255,255,0.2); border:none; color:white; padding:8px 16px; border-radius:20px; font-weight:600; backdrop-filter:blur(4px);">Close</button>
+        </div>
+        <div class="scan-pop" id="scan-pop">
+            <h2 id="res-title">Result</h2>
+            <p id="res-msg">Message</p>
+        </div>
+    </div>
+
+    <script src="organizer.app.js"></script>
+    <script>
+        function logout() {
+            localStorage.removeItem('fida_token');
+            //currentUser = null;
+            //joinedEventIds = [];
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

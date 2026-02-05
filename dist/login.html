@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Login | GigByCity</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <style>
+        :root {
+            --bg-app: #F3F4F6;
+            --bg-surface: #FFFFFF;
+            --primary: #111827;
+            --primary-inv: #FFFFFF;
+            --accent: #DC2626;
+            --text-main: #111827;
+            --text-sec: #6B7280;
+            --border: #E5E7EB;
+            --input-bg: #F9FAFB;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --radius-lg: 24px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background: var(--bg-app);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .auth-card {
+            background: var(--bg-surface);
+            width: 100%;
+            max-width: 420px;
+            padding: 40px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .brand {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 28px;
+            color: var(--primary);
+        }
+
+        .brand-mark {
+            width: 24px;
+            height: 24px;
+            background: var(--accent);
+            border-radius: 6px;
+            transform: rotate(45deg);
+        }
+
+        /* Role Selector */
+        .role-switch {
+            display: flex;
+            background: var(--input-bg);
+            border-radius: 14px;
+            padding: 4px;
+            margin-bottom: 28px;
+            position: relative;
+            border: 1px solid var(--border);
+            height: 48px;
+        }
+        
+        .role-btn {
+            flex: 1;
+            position: relative;
+            border: none;
+            background: transparent;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-sec);
+            cursor: pointer;
+            border-radius: 12px;
+            z-index: 2;
+            transition: color 0.3s ease;
+        }
+        
+        .role-btn.active { color: var(--primary-inv); }
+
+        .role-indicator {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            height: calc(100% - 8px);
+            background: var(--primary);
+            border-radius: 10px;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Tabs Text */
+        .tabs {
+            display: flex;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            background: transparent;
+            color: var(--text-sec);
+            cursor: pointer;
+            transition: 0.2s;
+            position: relative;
+        }
+
+        .tab.active { color: var(--primary); }
+        .tab::after {
+            content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 2px;
+            background: var(--primary); opacity: 0; transition: 0.2s;
+        }
+        .tab.active::after { opacity: 1; }
+
+        /* Inputs */
+        .inp-group { margin-bottom: 16px; text-align: left; position: relative; }
+        .label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; color: var(--text-main); }
+        .inp {
+            width: 100%; height: 50px; padding: 0 16px;
+            border: 1px solid var(--border); border-radius: 12px;
+            background: var(--input-bg);
+            font-family: inherit; font-size: 1rem;
+            transition: 0.2s; color: var(--text-main);
+        }
+        .inp:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.05); }
+
+        /* Password Toggle */
+        .pass-toggle {
+            position: absolute; right: 16px; top: 40px;
+            background: none; border: none; cursor: pointer; color: var(--text-sec);
+            font-size: 0.8rem; font-weight: 600;
+        }
+        .pass-toggle:hover { color: var(--text-main); }
+
+        .btn {
+            width: 100%; height: 52px;
+            background: var(--primary); color: var(--primary-inv);
+            border: none; border-radius: 14px;
+            font-weight: 600; font-size: 1rem;
+            cursor: pointer; margin-top: 12px;
+            transition: 0.2s; position: relative; overflow: hidden;
+        }
+        .btn:active { transform: scale(0.98); }
+        
+        .error-msg {
+            color: var(--accent); font-size: 0.85rem; font-weight: 500;
+            margin-top: 20px; display: none;
+            background: #FEF2F2; padding: 12px; border-radius: 10px;
+            border: 1px solid #FEE2E2; animation: shake 0.4s ease-in-out;
+        }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+        /* Forms */
+        #signup-form { display: none; animation: fadeIn 0.3s; }
+        #login-form { animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="auth-card">
+        <div class="brand">
+            <div class="brand-mark"></div>
+            GigByCity
+        </div>
+
+        <!-- Role Toggle -->
+        <div class="role-switch">
+            <div class="role-indicator" id="roleIndicator"></div>
+            <button class="role-btn active" onclick="setRole('user')">User</button>
+            <button class="role-btn" onclick="setRole('host')">Organizer</button>
+        </div>
+
+        <!-- Google Button -->
+        <div id="google-btn" style="margin-bottom: 24px; display: flex; justify-content: center; min-height: 40px;"></div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="toggleForm('login')">Sign In</button>
+            <button class="tab" onclick="toggleForm('signup')">Sign Up</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="inp-group">
+                <label class="label">Email Address</label>
+                <input type="email" id="lEmail" class="inp" placeholder="name@example.com" required>
+            </div>
+            <div class="inp-group">
+                <label class="label">Password</label>
+                <input type="password" id="lPass" class="inp" placeholder="••••••••" required>
+                <button type="button" class="pass-toggle" onclick="togglePass('lPass')">Show</button>
+            </div>
+            <button class="btn" id="loginBtn">Sign In</button>
+        </form>
+
+        <!-- Sign Up Form -->
+        <form id="signup-form" onsubmit="handleSignup(event)">
+            <div class="inp-group">
+                <label class="label">Full Name</label>
+                <input type="text" id="sName" class="inp" placeholder="e.g. Shawn fitz" required>
+            </div>
+            <div class="inp-group">
+                <label class="label">Email Address</label>
+                <input type="email" id="sEmail" class="inp" placeholder="name@example.com" required>
+            </div>
+            <div class="inp-group">
+                <label class="label">Password</label>
+                <input type="password" id="sPass" class="inp" placeholder="Create a password" required>
+                <button type="button" class="pass-toggle" onclick="togglePass('sPass')">Show</button>
+            </div>
+            <button class="btn" id="signupBtn">Create Account</button>
+        </form>
+
+        <div id="error-box" class="error-msg"></div>
+    </div>
+
+    <script>
+        let currentRole = 'user'; // 'user' or 'host'
+        
+        // Fetch config and initialize Google Auth on load
+        window.onload = async function() {
+            try {
+                const res = await fetch('/api/auth/config');
+                const config = await res.json();
+                
+                if (config.googleClientId && window.google) {
+                    google.accounts.id.initialize({
+                        client_id: config.googleClientId,
+                        callback: handleGoogleCredentialResponse
+                    });
+                    google.accounts.id.renderButton(
+                        document.getElementById("google-btn"),
+                        { theme: "outline", size: "large", width: 340 }
+                    );
+                    // google.accounts.id.prompt(); // Optional
+                }
+            } catch (e) {
+                console.error("Failed to load config", e);
+            }
+        };
+
+        function setRole(role) {
+            currentRole = role;
+            const indicator = document.getElementById('roleIndicator');
+            const btns = document.querySelectorAll('.role-btn');
+            
+            // Visual toggle
+            if(role === 'user') {
+                indicator.style.transform = 'translateX(0)';
+                btns[0].classList.add('active');
+                btns[1].classList.remove('active');
+            } else {
+                indicator.style.transform = 'translateX(100%)'; 
+                btns[0].classList.remove('active');
+                btns[1].classList.add('active');
+            }
+
+            // Update button text context
+            document.getElementById('loginBtn').innerText = role === 'host' ? 'Sign In to Console' : 'Sign In';
+            document.getElementById('signupBtn').innerText = role === 'host' ? 'Create Organizer Account' : 'Create User Account';
+            
+            // Clear errors on toggle
+            document.getElementById('error-box').style.display = 'none';
+        }
+
+        function toggleForm(type) {
+            const tabs = document.querySelectorAll('.tab');
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            const err = document.getElementById('error-box');
+            err.style.display = 'none';
+
+            if(type === 'login') {
+                tabs[0].classList.add('active');
+                tabs[1].classList.remove('active');
+                loginForm.style.display = 'block';
+                signupForm.style.display = 'none';
+            } else {
+                tabs[0].classList.remove('active');
+                tabs[1].classList.add('active');
+                loginForm.style.display = 'none';
+                signupForm.style.display = 'block';
+            }
+        }
+
+        function togglePass(id) {
+            const input = document.getElementById(id);
+            if(input.type === 'password') input.type = 'text';
+            else input.type = 'password';
+        }
+
+        async function handleGoogleCredentialResponse(response) {
+            try {
+                const res = await fetch('/api/auth/google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: response.credential, role: currentRole })
+                });
+                
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Google Auth failed');
+                
+                loginUser(data);
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        async function handleSignup(e) {
+            e.preventDefault();
+            const name = document.getElementById('sName').value.trim();
+            const email = document.getElementById('sEmail').value.trim().toLowerCase();
+            const password = document.getElementById('sPass').value;
+
+            try {
+                // Map frontend role 'host' to backend 'organizer'
+                const backendRole = currentRole === 'host' ? 'organizer' : 'user';
+
+                const res = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password, role: backendRole })
+                });
+                
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Signup failed');
+
+                loginUser(data);
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('lEmail').value.trim().toLowerCase();
+            const password = document.getElementById('lPass').value;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Login failed');
+
+                const backendRole = data.user.role === 'organizer' ? 'host' : 'user';
+                
+                if (backendRole !== currentRole) {
+                    const correctRole = backendRole === 'host' ? 'Organizer' : 'User';
+                    showError(`This email belongs to a ${correctRole} account. Please switch the toggle.`);
+                    return;
+                }
+
+                loginUser(data);
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        function loginUser(data) {
+            // Store Token
+            localStorage.setItem('fida_token', data.token);
+            // Store User info for UI
+            localStorage.setItem('fida_user', JSON.stringify(data.user));
+            
+            redirectUser(currentRole);
+        }
+
+        function redirectUser(role) {
+            if(role === 'host') {
+                window.location.href = '/organizer.html';
+            } else {
+                window.location.href = '/index.html'; 
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('error-box');
+            el.innerText = msg;
+            el.style.display = 'block';
+            // Auto hide
+            setTimeout(() => el.style.display = 'none', 4000);
+        }
+    </script>
+</body>
+</html>
