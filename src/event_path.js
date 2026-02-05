@@ -23,6 +23,7 @@ router.get('/', async (req, res) => {
         const skip = (page - 1) * limit;
 
         const events = await eventsCollection.find({})
+            .sort({ _id: -1 })
             .skip(skip)
             .limit(limit)
             .toArray();
@@ -95,10 +96,10 @@ router.post('/', authenticateJWT, upload.single('image'), async (req, res) => {
 router.post('/checkin', authenticateJWT, async (req, res) => {
     try {
         const eventsCollection = getEventsCollection();
-        const { eventId, userName } = req.body;
+        const { eventId, userId } = req.body;
         
-        if (!eventId || !userName) {
-            return res.status(400).json({ error: "Missing eventId or userName" });
+        if (!eventId || !userId) {
+            return res.status(400).json({ error: "Missing eventId or userId" });
         }
 
         const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) });
@@ -110,15 +111,15 @@ router.post('/checkin', authenticateJWT, async (req, res) => {
         }
 
         const result = await eventsCollection.updateOne(
-            { _id: new ObjectId(eventId), "attendees.name": userName },
+            { _id: new ObjectId(eventId), "attendees.userId": userId },
             { $set: { "attendees.$.status": "checked-in" } }
         );
 
         if (result.matchedCount === 0) {
-            return res.status(404).json({ error: "Guest not found" });
+            return res.status(404).json({ error: "Guest not found in list" });
         }
 
-        res.status(200).json({ success: true, message: `Checked in ${userName}` });
+        res.status(200).json({ success: true, message: "Check-in successful" });
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: "Check-in failed" });

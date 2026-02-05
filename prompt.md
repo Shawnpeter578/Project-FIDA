@@ -1,47 +1,28 @@
-w# Proposal: Organizer Dashboard Integration
+# Current Task: Update ClubApp Mini to New Backend Regime
 
-## Goal
-Fully functionalize `organizer.html` by connecting it to the backend API, enforcing access control, and implementing feature-rich event management without DB schema changes.
+The "mini" application currently relies on an external, possibly outdated backend and lacks support for the recent architectural changes (Pagination, Profile Editing). The goal is to align its frontend client (`script.js`) and UI (`index.html`) with the local `GigByCity` backend.
 
-## Architecture
-- **Frontend Logic:** Move inline scripts to `dist/js/organizer.app.js` (Class-based `OrganizerConsole`).
-- **State Management:** Reactive state for `events` and `currentTab`.
-- **Security:** Strict role validation on load.
+## Course of Action
 
-## Implementation Plan
+### 1. Refactor API Client (`clubapp-mini/dist/script.js`)
+-   **Target Local Backend:** Change `BASE_URL` from the Koyeb deployment to `http://localhost:3000/api`.
+-   **Implement Pagination:** Update `FidaAPI.events.getAll` to accept `page` and `limit` parameters, reflecting the new `GET /events` signature.
+-   **Enable Profile Management:**
+    -   Replace the mocked `FidaAPI.profile.loadDetails` with a real `GET /auth/me` call.
+    -   Add `FidaAPI.profile.update` to interface with the new `PUT /auth/me` endpoint.
 
-### 1. Access Control
-- **Logic:** On load, verify `fida_token` and `fida_user` from `localStorage`.
-- **Enforcement:** If `!token` or `user.role !== 'organizer'`, redirect to `/login.html` immediately.
+### 2. Update UI Logic (`clubapp-mini/dist/index.html`)
+-   **Lazy Loading:**
+    -   Modify `fetchAndRenderFeed` to support appending data (infinite scroll or "Load More" pattern).
+    -   Add a "Load More" button to the event feed that triggers the next page fetch.
+-   **Profile Wiring:**
+    -   Update `saveProfile` to call `FidaAPI.profile.update` instead of just showing a toast.
+    -   Ensure profile data loading (`loadProfileData`) correctly maps the response fields from `GET /auth/me`.
+-   **Cleanup:** Remove legacy hacks (like duplicate `mode` fields in Event Create) and ensure form submissions align with the expected `multipart/form-data` structure where applicable.
 
-### 2. Backend Integration
-- **Dashboard Data:**
-    - Fetch all events via `GET /api/events`.
-    - Client-side filter: `events.filter(e => e.creatorId === currentUser._id)`.
-    - **Revenue:** Calculate `Σ (event.price * event.attendees.length)`.
-    - **Sales:** Calculate `Σ event.attendees.length`.
-- **Event Creation:**
-    - Map form inputs to `FormData`.
-    - Endpoint: `POST /api/events`.
-    - Handle image upload via existing `multer` -> `Cloudinary` flow.
-- **Guest Management:**
-    - Use `event.attendees` array (contains `{ userId, name, status }`).
-    - Display real names and statuses (Pending/Checked-in).
-    - **QR Scanning:** Connect `html5-qrcode` to `POST /api/events/checkin`.
-
-### 3. Scalability Improvements
-- **Class Structure:**
-    ```javascript
-    class OrganizerConsole {
-        constructor() { ... }
-        async init() { ... } // Auth check & data fetch
-        render() { ... } // UI updates
-        async createEvent(formData) { ... }
-    }
-    ```
-- **Benefit:** Easy to add new tabs (e.g., "Analytics", "Promotions") by extending the class methods.
-
-## Constraints Check
-- [x] **No DB Changes:** Uses existing `attendees` schema and derived stats.
-- [x] **Scalable:** Modular JS file.
-- [x] **Security:** Frontend role guards + existing Backend middleware.
+## Verification Plan
+-   **Manual Test:** Serve the mini app (using its simple server) and verify:
+    -   Login works against the local DB.
+    -   Feed loads the first 20 events.
+    -   "Load More" fetches the next batch.
+    -   Profile updates persist to the local MongoDB.

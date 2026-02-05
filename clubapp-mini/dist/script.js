@@ -3,7 +3,7 @@
    ========================================= */
 FidaAPI = {
     // URL Configuration
-    BASE_URL: 'https://independent-irita-clubspot-9e43f2fa.koyeb.app/api',
+    BASE_URL: 'http://localhost:3000/api',
 
     // Helper: Get Auth Headers
     getHeaders(isFormData = false) {
@@ -43,8 +43,8 @@ FidaAPI = {
     // --- EVENTS ---
 
     events: {
-        async getAll() {
-            const res = await fetch(`${FidaAPI.BASE_URL}/events`);
+        async getAll(page = 1, limit = 10) {
+            const res = await fetch(`${FidaAPI.BASE_URL}/events?page=${page}&limit=${limit}`);
             return await res.json();
         },
 
@@ -70,7 +70,18 @@ FidaAPI = {
 
     profile: {
         async loadDetails(){
-            return {phone: '9999', city: 'pune'}
+            // Re-use auth.getMe as it now returns full profile details
+            return await FidaAPI.auth.getMe();
+        },
+        
+        async update(data) {
+            const res = await fetch(`${FidaAPI.BASE_URL}/auth/me`, {
+                method: 'PUT',
+                headers: FidaAPI.getHeaders(),
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) throw new Error('Update failed');
+            return await res.json();
         }
     }
 };

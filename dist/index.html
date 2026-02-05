@@ -58,7 +58,7 @@
   <header class="app-header">
     <a href="#" class="brand">
       <div class="brand-mark"></div>
-      FIDA
+      GigByCity
     </a>
     <div class="user-pill" onclick="switchView('settings', document.querySelector('.dock-item:last-child'))">
         <span id="headerName">GUEST</span>
@@ -687,24 +687,81 @@
 
     // --- DATA & RENDERING ---
 
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let isLoadingMore = false;
+    let hasMoreEvents = true;
+
     async function fetchAndRenderFeed() {
+        // Wrapper for initial load to maintain compatibility
+        await loadFeed(true);
+    }
+
+    async function loadFeed(reset = false) {
+        if (isLoadingMore) return;
+        isLoadingMore = true;
+
+        if (reset) {
+            currentPage = 1;
+            hasMoreEvents = true;
+            currentEvents = [];
+            document.getElementById('clubsContainer').innerHTML = ''; // Clear immediately
+        }
+
         try {
-            const data = await FidaAPI.events.getAll();
-            currentEvents = data;
-            renderFeed();
-            renderPasses();
-            renderHostDashboard();
+            const data = await FidaAPI.events.getAll(currentPage, itemsPerPage);
+            
+            // If less data than limit, we reached the end
+            if (data.length < itemsPerPage) {
+                hasMoreEvents = false;
+            }
+
+            if (reset) {
+                currentEvents = data;
+            } else {
+                currentEvents = [...currentEvents, ...data];
+            }
+
+            renderFeed(reset ? false : true); // If reset, don't append (overwrite). If not reset, append.
+            
+            // Secondary renders (these don't need pagination yet)
+            if (reset) {
+                renderPasses();
+                renderHostDashboard();
+            }
+
         } catch (e) {
             console.error("Failed to fetch events", e);
             showToast("Could not load feed");
+        } finally {
+            isLoadingMore = false;
         }
     }
 
-    function renderFeed() {
-        const container = document.getElementById('clubsContainer'); 
-        container.innerHTML = '';
+    async function loadNextPage() {
+        if (!hasMoreEvents || isLoadingMore) return;
+        currentPage++;
+        const btn = document.getElementById('btnLoadMore');
+        if(btn) btn.innerText = 'LOADING...';
+        await loadFeed(false);
+        if(btn) btn.innerText = 'LOAD MORE';
+    }
+
+    function renderFeed(append = false) {
+        const container = document.getElementById('clubsContainer');
+        
+        // Remove existing "Load More" button if appending
+        const existingBtn = document.getElementById('btnLoadMore');
+        if (existingBtn) existingBtn.remove();
+
+        if (!append) {
+            container.innerHTML = '';
+        }
         
         // Filter: Search AND Category
+        // Note: Client-side filtering only works on *loaded* events. 
+        // For true scalable filtering, this needs to move to backend.
+        // For now, we filter what we have.
         let filtered = currentEvents.filter(item => 
             (item.title.toLowerCase().includes(currentSearch) || 
             (item.location && item.location.toLowerCase().includes(currentSearch)))
@@ -714,10 +771,21 @@
             filtered = filtered.filter(item => item.category === currentFilter);
         }
 
-        if(filtered.length === 0) {
+        if(filtered.length === 0 && !append) {
             container.innerHTML = `<div class="empty-state">NO SIGNALS FOUND</div>`;
             return;
         }
+
+        // Only render the NEW events if appending? 
+        // Actually, simpler to re-render the *filtered* list or just append the last batch.
+        // To support client-side search correctly with pagination, we must render `filtered`.
+        // BUT, if we re-render `filtered` every time, we lose the "append" efficiency benefit.
+        // However, `currentEvents` grows. Re-rendering the whole DOM list is okay for < 100 items.
+        // Let's stick to clearing and re-rendering `filtered` to ensure consistency with search.
+        // Optimization: If `append` is true and NO filters are active, we could just append.
+        // But let's keep it safe:
+        
+        container.innerHTML = ''; // Always clear to re-render sorted/filtered list correctly
 
         filtered.forEach(event => {
             const id = event._id || event.id;
@@ -779,6 +847,32 @@
             `;
             container.insertAdjacentHTML('beforeend', html);
         });
+
+        // Add Load More Button if applicable
+        if (hasMoreEvents && currentSearch === '' && currentFilter === 'ALL') {
+            const btnHtml = `
+                <button id="btnLoadMore" onclick="loadNextPage()" style="
+                    width: 100%; 
+                    padding: 16px; 
+                    background: transparent; 
+                    border: 2px solid var(--border); 
+                    color: var(--text-muted); 
+                    font-weight: 700; 
+                    border-radius: 12px; 
+                    margin-top: 20px;
+                    margin-bottom: 80px;
+                    cursor: pointer;">
+                    LOAD MORE
+                </button>
+            `;
+            container.insertAdjacentHTML('beforeend', btnHtml);
+        } else if (hasMoreEvents) {
+             // If searching/filtering, we don't show "Load More" because the client only has loaded data.
+             // Ideally, search/filter should trigger a backend query, but that's a larger refactor.
+             container.insertAdjacentHTML('beforeend', `<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.8rem;">Filter applies to loaded items only. Clear filters to load more.</div>`);
+        } else {
+             container.insertAdjacentHTML('beforeend', `<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.8rem; margin-bottom:80px;">END OF SIGNAL</div>`);
+        }
     }
 
     function renderPasses() {
@@ -1113,7 +1207,7 @@
         }
     }
 
-    function onScanSuccess(decodedText, decodedResult) {
+    async function onScanSuccess(decodedText, decodedResult) {
         if(html5QrcodeScanner) html5QrcodeScanner.pause();
         document.getElementById('scannerModal').classList.remove('visible');
         
@@ -1126,20 +1220,27 @@
         const eventId = decodedText.substring(0, splitIndex);
         const userId = decodedText.substring(splitIndex + 1);
         
-        const event = currentEvents.find(e => (e._id || e.id) === eventId);
-        
-        if(!event) {
-            showScanResult('error', 'Event Not Found', userId);
-            return;
+        try {
+            const token = localStorage.getItem('fida_token');
+            const res = await fetch('/api/events/checkin', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ eventId, userId })
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                showScanResult('success', 'ACCESS GRANTED', 'Check-in recorded');
+                fetchEvents(); // Refresh data
+            } else {
+                showScanResult('error', 'DENIED', data.error || 'Check-in failed');
+            }
+        } catch (e) {
+            showScanResult('error', 'Network Error', 'Please retry');
         }
-        
-        if(event.creatorId !== currentUser._id) {
-            showScanResult('error', 'Wrong Host', 'This is not your event');
-            return;
-        }
-        
-        // Success scenario
-        showScanResult('success', 'ACCESS GRANTED', userId);
     }
 
     function showScanResult(type, title, sub) {

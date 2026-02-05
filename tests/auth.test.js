@@ -26,6 +26,16 @@ const mockCollection = (collectionName) => ({
     mockDb[collectionName].push(newDoc);
     return { insertedId: newDoc._id };
   }),
+  findOneAndUpdate: jest.fn(async (query, update, options) => {
+    const col = mockDb[collectionName];
+    const index = col.findIndex(d => d._id.toString() === query._id.toString());
+    if (index === -1) return { value: null };
+    
+    if (update.$set) {
+        col[index] = { ...col[index], ...update.$set };
+    }
+    return { value: col[index] };
+  }),
 });
 
 jest.mock('mongodb', () => {
@@ -117,5 +127,32 @@ describe('Auth API', () => {
       .send({ email: 'nonexistent@example.com', password: 'password123' });
 
     expect(res.statusCode).toBe(401);
+  });
+
+  test('PUT /api/auth/me (Update Profile)', async () => {
+    // 1. Create User
+    const signupRes = await request(app)
+        .post('/api/auth/signup')
+        .send({ name: 'Update Test', email: 'update@example.com', password: '123' });
+    
+    const token = signupRes.body.token;
+
+    // 2. Update Profile
+    const res = await request(app)
+      .put('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Updated Name',
+        phone: '1234567890',
+        city: 'Cyber City'
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.user.name).toBe('Updated Name');
+    expect(res.body.user.phone).toBe('1234567890');
+    expect(res.body.user.city).toBe('Cyber City');
+    // Ensure email didn't change (if we tried to send it, it should be ignored by logic, but here we check it remains)
+    expect(res.body.user.email).toBe('update@example.com');
   });
 });
