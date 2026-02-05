@@ -1,47 +1,42 @@
-w# Proposal: Organizer Dashboard Integration
+# Analysis of `dist/login.html` & Integration Plan
 
-## Goal
-Fully functionalize `organizer.html` by connecting it to the backend API, enforcing access control, and implementing feature-rich event management without DB schema changes.
+## 1. Current State Analysis
+The `dist/login.html` file has been reviewed. It features a modern "Ultra UI" split-screen design and appears to be in a **nearly complete state** regarding the user's requests, though with some critical gaps (likely the "unplugged" parts mentioned).
 
-## Architecture
-- **Frontend Logic:** Move inline scripts to `dist/js/organizer.app.js` (Class-based `OrganizerConsole`).
-- **State Management:** Reactive state for `events` and `currentTab`.
-- **Security:** Strict role validation on load.
+### Features Detected:
+- **Role Selection:** A pill-shaped selector allows switching between **Fan (User)**, **Organizer (Host)**, and **Artist**. The UI logic (`setRole`) correctly updates the form context.
+- **Google Sign-In:** A container `<div id="google-btn"></div>` is present inside `.social-auth`. 
+    - **Placement:** It is **already positioned below** the email/password forms (`#login-form` and `#signup-form`), satisfying the requirement.
+    - **Logic:** The `window.onload` script fetches config and initializes the Google button. It correctly captures the *current selected role* and sends it to the backend (`/api/auth/google`).
+- **Backend Alignment:** The logic in `handleSignup` and `handleLogin` attempts to map frontend roles to backend roles (`host` -> `organizer`).
 
-## Implementation Plan
-
-### 1. Access Control
-- **Logic:** On load, verify `fida_token` and `fida_user` from `localStorage`.
-- **Enforcement:** If `!token` or `user.role !== 'organizer'`, redirect to `/login.html` immediately.
-
-### 2. Backend Integration
-- **Dashboard Data:**
-    - Fetch all events via `GET /api/events`.
-    - Client-side filter: `events.filter(e => e.creatorId === currentUser._id)`.
-    - **Revenue:** Calculate `Σ (event.price * event.attendees.length)`.
-    - **Sales:** Calculate `Σ event.attendees.length`.
-- **Event Creation:**
-    - Map form inputs to `FormData`.
-    - Endpoint: `POST /api/events`.
-    - Handle image upload via existing `multer` -> `Cloudinary` flow.
-- **Guest Management:**
-    - Use `event.attendees` array (contains `{ userId, name, status }`).
-    - Display real names and statuses (Pending/Checked-in).
-    - **QR Scanning:** Connect `html5-qrcode` to `POST /api/events/checkin`.
-
-### 3. Scalability Improvements
-- **Class Structure:**
+## 2. Identified Gaps ("Unplugged Stuff")
+While the login page code is robust, the ecosystem around it has missing pieces:
+1.  **Missing Artist Dashboard:** The code attempts to redirect artists to `/artist-dashboard.html`:
     ```javascript
-    class OrganizerConsole {
-        constructor() { ... }
-        async init() { ... } // Auth check & data fetch
-        render() { ... } // UI updates
-        async createEvent(formData) { ... }
+    } else if (role === 'artist') {
+        window.location.href = '/artist-dashboard.html'; 
     }
     ```
-- **Benefit:** Easy to add new tabs (e.g., "Analytics", "Promotions") by extending the class methods.
+    **Critical Issue:** This file **does not exist** in the `dist/` directory. Login will succeed, but the user will face a 404 error.
+2.  **Environment Dependency:** The Google button relies on `/api/auth/config` returning a valid `googleClientId`. If `.env` is missing or the backend fails this request, the button simply won't appear (silently fails).
 
-## Constraints Check
-- [x] **No DB Changes:** Uses existing `attendees` schema and derived stats.
-- [x] **Scalable:** Modular JS file.
-- [x] **Security:** Frontend role guards + existing Backend middleware.
+## 3. Integration Plan
+
+### A. Google Sign-In (Verification)
+Since the code is already present and correct:
+1.  **Verify:** Ensure `.env` contains `GOOGLE_CLIENT_ID`.
+2.  **Test:** Start the server and confirm the button renders below the email forms.
+
+### B. Artist Role (Completion)
+To fully "plug in" the Artist role:
+1.  **Create `dist/artist-dashboard.html`:**
+    - Needs to match the "Platinum & Crimson" theme.
+    - Should include placeholder features relevant to artists (e.g., "My Gigs", "Audience Stats", "QR Code for Backstage").
+2.  **Backend Verification:**
+    - `src/auth_path.js` already includes `artist` in `validRoles`.
+    - No changes needed in backend logic, just functional testing.
+
+## 4. Next Steps for Developer
+1.  **Create** the missing `dist/artist-dashboard.html`.
+2.  **Run** `npm start` to verify the full flow: `Login (Artist) -> Redirect -> Dashboard`.
