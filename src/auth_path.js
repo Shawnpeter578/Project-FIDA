@@ -151,12 +151,56 @@ router.get('/me', authenticateJWT, async (req, res) => {
         const usersCollection = getUsersCollection();
         const user = await usersCollection.findOne(
             { _id: new ObjectId(req.userId) }, 
-            { projection: { _id: 1, name: 1, picture: 1, joinedEvents: 1, role: 1 } }
+            { projection: { _id: 1, name: 1, picture: 1, joinedEvents: 1, role: 1, email: 1, phone: 1, city: 1 } }
         );
         if (!user) return res.status(401).json({ error: "User not found" });
         res.json(user);
     } catch (e) {
         res.status(500).json({ error: "Session check failed" });
+    }
+});
+
+router.put('/me', authenticateJWT, async (req, res) => {
+    try {
+        const usersCollection = getUsersCollection();
+        const { name, phone, city } = req.body;
+
+        const updateFields = {};
+        if (name) updateFields.name = name;
+        if (phone) updateFields.phone = phone;
+        if (city) updateFields.city = city;
+
+        if (Object.keys(updateFields).length === 0) {
+            return res.status(400).json({ error: "No fields to update" });
+        }
+
+        const result = await usersCollection.findOneAndUpdate(
+            { _id: new ObjectId(req.userId) },
+            { $set: updateFields },
+            { returnDocument: 'after' }
+        );
+
+        const updatedUser = result.value || result; // Handle different driver versions
+
+        if (!updatedUser) return res.status(404).json({ error: "User not found" });
+
+        res.json({
+            success: true,
+            user: {
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                picture: updatedUser.picture,
+                role: updatedUser.role,
+                phone: updatedUser.phone,
+                city: updatedUser.city,
+                joinedEvents: updatedUser.joinedEvents
+            }
+        });
+
+    } catch (e) {
+        console.error("Update Profile Error:", e);
+        res.status(500).json({ error: "Update failed" });
     }
 });
 

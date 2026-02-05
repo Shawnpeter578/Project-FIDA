@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        // Immediate Auth Check
+        const token = localStorage.getItem('fida_token');
+        const userStr = localStorage.getItem('fida_user');
+        if (!token || !userStr) {
+            window.location.href = 'login.html';
+        } else {
+            try {
+                const user = JSON.parse(userStr);
+                if (user.role !== 'artist') {
+                    // Fallback redirect if wrong role
+                    window.location.href = user.role === 'organizer' ? 'organizer.html' : 'index.html';
+                }
+            } catch(e) {
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Artist Dashboard | GigByCity</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Libre+Barcode+128+Text&display=swap" rel="stylesheet">
+
+    <!-- Styles & API -->
+    <link rel="stylesheet" href="style.css">
+    <script defer src="script.js"></script>
+
+    <style>
+        /* Artist Specific Overrides */
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: var(--shadow-sm);
+        }
+        .stat-val { font-size: 2.5rem; font-weight: 800; line-height: 1; letter-spacing: -0.04em; color: var(--text-main); }
+        .stat-label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        .chart-bars { display: flex; align-items: flex-end; gap: 8px; height: 100px; padding-top: 20px; }
+        .bar { flex: 1; background: var(--bg-dots); border-radius: 4px; transition: height 1s var(--ease-spring); }
+        .bar.active { background: var(--accent); }
+
+        .gig-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .gig-date {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 60px; height: 60px; background: var(--bg-card-sub); border-radius: 14px;
+            font-family: var(--font-mono); line-height: 1.2;
+        }
+        .gd-mon { font-size: 0.75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; }
+        .gd-day { font-size: 1.2rem; font-weight: 800; color: var(--text-main); }
+        
+        .gig-info { flex: 1; }
+        .gig-title { font-weight: 800; font-size: 1.1rem; color: var(--text-main); margin-bottom: 4px; }
+        .gig-loc { font-size: 0.85rem; color: var(--text-sec); display: flex; align-items: center; gap: 6px; }
+    </style>
+</head>
+<body>
+
+  <!-- Splash -->
+  <div id="splashScreen">
+    <div class="splash-logo">ARTIST</div>
+    <div class="splash-loader"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <a href="#" class="brand">
+      <div class="brand-mark"></div>
+      STUDIO
+    </a>
+    <div class="user-pill" onclick="switchView('settings', document.querySelector('.dock-item:last-child'))">
+        <span id="headerName">ARTIST</span>
+        <div class="avatar-circle" id="headerAvatar">A</div>
+    </div>
+  </header>
+
+  <!-- VIEW: DASHBOARD -->
+  <div id="viewDashboard" class="view-section active">
+      <div style="padding: 20px;">
+          <h1 style="font-size: 2.2rem; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 8px;">
+              Hello, <span id="dashName">Artist</span>.
+          </h1>
+          <p style="color: var(--text-sec); margin-bottom: 32px;">Here's what's happening with your sound.</p>
+
+          <!-- Stats Row -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+              <div class="stat-card">
+                  <div class="stat-val">12.4k</div>
+                  <div class="stat-label">Monthly Listeners</div>
+              </div>
+              <div class="stat-card">
+                  <div class="stat-val">842</div>
+                  <div class="stat-label">Ticket Sales</div>
+              </div>
+          </div>
+
+          <!-- Featured Next Gig -->
+          <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
+              <div class="stat-label">Next Performance</div>
+          </div>
+
+          <div id="nextGigContainer">
+              <!-- Populated by JS -->
+              <div class="empty-state">No upcoming gigs scheduled.</div>
+          </div>
+      </div>
+  </div>
+
+  <!-- VIEW: GIGS -->
+  <div id="viewGigs" class="view-section">
+      <div style="padding: 20px;">
+          <div style="font-size:1.8rem; font-weight:800; letter-spacing:-0.03em; margin-bottom: 24px;">My Gigs</div>
+          <div id="gigsList">
+              <!-- Populated by JS -->
+          </div>
+      </div>
+  </div>
+
+  <!-- VIEW: STATS -->
+  <div id="viewStats" class="view-section">
+      <div style="padding: 20px;">
+          <div style="font-size:1.8rem; font-weight:800; letter-spacing:-0.03em; margin-bottom: 24px;">Analytics</div>
+          
+          <div class="stat-card" style="margin-bottom: 24px;">
+              <div class="stat-label" style="margin-bottom: 16px;">Audience Growth (Last 7 Days)</div>
+              <div class="chart-bars">
+                  <div class="bar" style="height: 30%"></div>
+                  <div class="bar" style="height: 45%"></div>
+                  <div class="bar" style="height: 40%"></div>
+                  <div class="bar active" style="height: 75%"></div>
+                  <div class="bar" style="height: 60%"></div>
+                  <div class="bar" style="height: 85%"></div>
+                  <div class="bar" style="height: 55%"></div>
+              </div>
+          </div>
+
+          <div class="stat-card">
+              <div class="stat-label">Demographics</div>
+              <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+                  <div style="display: flex; justify-content: space-between; font-weight: 600;">
+                      <span>Sector 4</span>
+                      <span>45%</span>
+                  </div>
+                  <div style="width: 100%; height: 6px; background: var(--bg-dots); border-radius: 4px; overflow: hidden;">
+                      <div style="width: 45%; height: 100%; background: var(--text-main);"></div>
+                  </div>
+                  
+                  <div style="display: flex; justify-content: space-between; font-weight: 600; margin-top: 8px;">
+                      <span>Underground</span>
+                      <span>30%</span>
+                  </div>
+                  <div style="width: 100%; height: 6px; background: var(--bg-dots); border-radius: 4px; overflow: hidden;">
+                      <div style="width: 30%; height: 100%; background: var(--accent);"></div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <!-- VIEW: SETTINGS (Reused Structure) -->
+  <div id="viewSettings" class="view-section">
+      <div style="padding: 20px; font-size:1.8rem; font-weight:800; letter-spacing:-0.03em;">Artist Profile</div>
+      <div style="padding: 0 20px;">
+          <div style="text-align: center; margin-bottom: 24px;">
+              <div style="width: 100px; height: 100px; background: var(--bg-dots); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700; overflow:hidden; border:2px solid var(--border);" id="settingsAvatarDisplay"></div>
+              <div style="font-weight: 700; font-size: 1.2rem; margin-bottom: 4px;" id="profileName">Name</div>
+              <div style="color: var(--text-muted); font-size: 0.9rem;">Artist Account</div>
+          </div>
+          
+          <button onclick="logout()" class="btn-main" style="background: #ef4444; color: white;">LOG OUT</button>
+      </div>
+  </div>
+
+  <!-- DOCK -->
+  <div class="dock-container">
+    <div class="dock">
+        <div class="dock-item active" onclick="switchView('dashboard', this)">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        </div>
+        <div class="dock-item" onclick="switchView('gigs', this)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+        </div>
+        <div class="dock-item" onclick="switchView('stats', this)">
+             <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        </div>
+        <div class="dock-item" onclick="switchView('settings', this)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast">
+      <div class="toast-icon"></div>
+      <span id="toastMsg" style="font-weight:600; font-size:0.95rem;">Notification</span>
+  </div>
+
+  <script>
+    
+      let currentUser = null;
+
+      window.addEventListener('load', async () => {
+          setTimeout(() => {
+              document.getElementById('splashScreen').classList.add('hidden');
+          }, 800);
+          
+          await init();
+      });
+
+      async function init() {
+          const userStr = localStorage.getItem('fida_user');
+          if(userStr) {
+              currentUser = JSON.parse(userStr);
+              updateUI();
+          }
+          
+          // Verify with API
+          try {
+              const user = await FidaAPI.auth.getMe();
+              currentUser = user;
+              localStorage.setItem('fida_user', JSON.stringify(user));
+              updateUI();
+              loadGigs();
+          } catch(e) {
+              console.error("Auth sync failed", e);
+              if(e.message === 'Session invalid') logout();
+          }
+      }
+
+      function updateUI() {
+          if(!currentUser) return;
+          const name = currentUser.name.split(' ')[0];
+          document.getElementById('headerName').innerText = name.toUpperCase();
+          document.getElementById('dashName').innerText = name;
+          document.getElementById('profileName').innerText = currentUser.name;
+          
+          const avatar = currentUser.picture ? `<img src="${currentUser.picture}">` : name.charAt(0);
+          document.getElementById('headerAvatar').innerHTML = avatar;
+          document.getElementById('settingsAvatarDisplay').innerHTML = avatar;
+      }
+
+      async function loadGigs() {
+        alert("Under construction. Enjoy :)")
+          try {
+              // Fetch all events for prototype
+              const allEvents = await FidaAPI.events.getAll();
+              
+              // Filter logic: 
+              // Since we don't have "artistId" on events yet, we'll Mock it.
+              // We'll show Random 3 events as "My Gigs" to simulate data for the prototype.
+              // OR if they are creator, show those.
+              
+              let myGigs = allEvents.filter(e => e.creatorId === currentUser._id);
+              
+              // Fallback for prototype: If no created events, show some suggestions
+              if(myGigs.length === 0 && allEvents.length > 0) {
+                   // Just pick first 2 for display purposes if list empty
+                   // myGigs = allEvents.slice(0, 2); 
+              }
+
+              renderGigs(myGigs);
+              renderNextGig(myGigs);
+
+          } catch(e) {
+              console.error("Failed to load gigs", e);
+          }
+      }
+
+      function renderGigs(events) {
+          const container = document.getElementById('gigsList');
+          container.innerHTML = '';
+
+          if(events.length === 0) {
+              container.innerHTML = `<div class="empty-state">No gigs booked yet. <br>Contact an organizer to get added to a lineup.</div>`;
+              return;
+          }
+
+          events.forEach(e => {
+             const dateObj = new Date(e.date);
+             const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
+             const day = dateObj.getDate();
+
+             const html = `
+                <div class="gig-card">
+                    <div class="gig-date">
+                        <span class="gd-mon">${month}</span>
+                        <span class="gd-day">${day}</span>
+                    </div>
+                    <div class="gig-info">
+                        <div class="gig-title">${e.title}</div>
+                        <div class="gig-loc">📍 ${e.location}</div>
+                    </div>
+                    <div style="font-weight:700; font-family:var(--font-mono);">${e.time}</div>
+                </div>
+             `;
+             container.insertAdjacentHTML('beforeend', html);
+          });
+      }
+
+      function renderNextGig(events) {
+          const container = document.getElementById('nextGigContainer');
+          
+          // Sort by date nearest
+          const upcoming = events.filter(e => new Date(e.date) >= new Date()).sort((a,b) => new Date(a.date) - new Date(b.date));
+          
+          if(upcoming.length === 0) {
+              container.innerHTML = `<div class="empty-state" style="background:var(--bg-card-sub); padding:24px; border-radius:24px;">No upcoming shows. Time to hit the studio.</div>`;
+              return;
+          }
+
+          const next = upcoming[0];
+          const html = `
+            <div class="ticket" style="transform:none; animation:none; cursor:default;">
+                <div class="ticket-inner" style="box-shadow:var(--shadow-lg);">
+                    <img src="${next.image || 'https://images.unsplash.com/photo-1514525253440-b393332569fa?w=800&auto=format&fit=crop'}" style="height:140px; width:100%; object-fit:cover;">
+                    <div class="ticket-content">
+                        <div class="t-title" style="font-size:1.4rem;">${next.title}</div>
+                        <div class="t-desc">UP NEXT • ${new Date(next.date).toLocaleDateString()} @ ${next.time}</div>
+                    </div>
+                </div>
+            </div>
+          `;
+          container.innerHTML = html;
+      }
+
+      function switchView(viewName, el) {
+          document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+          
+          const map = {
+              'dashboard': 'viewDashboard',
+              'gigs': 'viewGigs',
+              'stats': 'viewStats',
+              'settings': 'viewSettings'
+          };
+          
+          document.getElementById(map[viewName]).classList.add('active');
+          
+          document.querySelectorAll('.dock-item').forEach(i => i.classList.remove('active'));
+          if(el) el.classList.add('active');
+      }
+
+      function logout() {
+          localStorage.removeItem('fida_token');
+          localStorage.removeItem('fida_user');
+          window.location.href = 'login.html';
+      }
+
+      function showToast(msg) {
+        const t = document.getElementById('toast');
+        if (!t) return;
+        document.getElementById('toastMsg').textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+  </script>
+</body>
+</html>

@@ -1,42 +1,28 @@
-# Analysis of `dist/login.html` & Integration Plan
+# Current Task: Update ClubApp Mini to New Backend Regime
 
-## 1. Current State Analysis
-The `dist/login.html` file has been reviewed. It features a modern "Ultra UI" split-screen design and appears to be in a **nearly complete state** regarding the user's requests, though with some critical gaps (likely the "unplugged" parts mentioned).
+The "mini" application currently relies on an external, possibly outdated backend and lacks support for the recent architectural changes (Pagination, Profile Editing). The goal is to align its frontend client (`script.js`) and UI (`index.html`) with the local `GigByCity` backend.
 
-### Features Detected:
-- **Role Selection:** A pill-shaped selector allows switching between **Fan (User)**, **Organizer (Host)**, and **Artist**. The UI logic (`setRole`) correctly updates the form context.
-- **Google Sign-In:** A container `<div id="google-btn"></div>` is present inside `.social-auth`. 
-    - **Placement:** It is **already positioned below** the email/password forms (`#login-form` and `#signup-form`), satisfying the requirement.
-    - **Logic:** The `window.onload` script fetches config and initializes the Google button. It correctly captures the *current selected role* and sends it to the backend (`/api/auth/google`).
-- **Backend Alignment:** The logic in `handleSignup` and `handleLogin` attempts to map frontend roles to backend roles (`host` -> `organizer`).
+## Course of Action
 
-## 2. Identified Gaps ("Unplugged Stuff")
-While the login page code is robust, the ecosystem around it has missing pieces:
-1.  **Missing Artist Dashboard:** The code attempts to redirect artists to `/artist-dashboard.html`:
-    ```javascript
-    } else if (role === 'artist') {
-        window.location.href = '/artist-dashboard.html'; 
-    }
-    ```
-    **Critical Issue:** This file **does not exist** in the `dist/` directory. Login will succeed, but the user will face a 404 error.
-2.  **Environment Dependency:** The Google button relies on `/api/auth/config` returning a valid `googleClientId`. If `.env` is missing or the backend fails this request, the button simply won't appear (silently fails).
+### 1. Refactor API Client (`clubapp-mini/dist/script.js`)
+-   **Target Local Backend:** Change `BASE_URL` from the Koyeb deployment to `http://localhost:3000/api`.
+-   **Implement Pagination:** Update `FidaAPI.events.getAll` to accept `page` and `limit` parameters, reflecting the new `GET /events` signature.
+-   **Enable Profile Management:**
+    -   Replace the mocked `FidaAPI.profile.loadDetails` with a real `GET /auth/me` call.
+    -   Add `FidaAPI.profile.update` to interface with the new `PUT /auth/me` endpoint.
 
-## 3. Integration Plan
+### 2. Update UI Logic (`clubapp-mini/dist/index.html`)
+-   **Lazy Loading:**
+    -   Modify `fetchAndRenderFeed` to support appending data (infinite scroll or "Load More" pattern).
+    -   Add a "Load More" button to the event feed that triggers the next page fetch.
+-   **Profile Wiring:**
+    -   Update `saveProfile` to call `FidaAPI.profile.update` instead of just showing a toast.
+    -   Ensure profile data loading (`loadProfileData`) correctly maps the response fields from `GET /auth/me`.
+-   **Cleanup:** Remove legacy hacks (like duplicate `mode` fields in Event Create) and ensure form submissions align with the expected `multipart/form-data` structure where applicable.
 
-### A. Google Sign-In (Verification)
-Since the code is already present and correct:
-1.  **Verify:** Ensure `.env` contains `GOOGLE_CLIENT_ID`.
-2.  **Test:** Start the server and confirm the button renders below the email forms.
-
-### B. Artist Role (Completion)
-To fully "plug in" the Artist role:
-1.  **Create `dist/artist-dashboard.html`:**
-    - Needs to match the "Platinum & Crimson" theme.
-    - Should include placeholder features relevant to artists (e.g., "My Gigs", "Audience Stats", "QR Code for Backstage").
-2.  **Backend Verification:**
-    - `src/auth_path.js` already includes `artist` in `validRoles`.
-    - No changes needed in backend logic, just functional testing.
-
-## 4. Next Steps for Developer
-1.  **Create** the missing `dist/artist-dashboard.html`.
-2.  **Run** `npm start` to verify the full flow: `Login (Artist) -> Redirect -> Dashboard`.
+## Verification Plan
+-   **Manual Test:** Serve the mini app (using its simple server) and verify:
+    -   Login works against the local DB.
+    -   Feed loads the first 20 events.
+    -   "Load More" fetches the next batch.
+    -   Profile updates persist to the local MongoDB.

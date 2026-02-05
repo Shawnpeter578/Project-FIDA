@@ -200,7 +200,7 @@ class OrganizerConsole {
 
     async manualCheckin(userId, userName) {
         // Optimistic UI update could happen here, but lets stick to source of truth
-        const res = await this.performCheckin(this.activeEventId, userName);
+        const res = await this.performCheckin(this.activeEventId, userId);
         if (res.success) {
             await this.fetchData();
             this.renderGuests(); // Re-render to show updated status
@@ -322,31 +322,9 @@ class OrganizerConsole {
         this.scanner.pause();
 
         const [eid, uid] = decodedText.split('-');
-        // Need name? The QR payload in frontend script was `${eventId}-${userId}`.
-        // The checkin endpoint requires `userName`...
-        // Wait, `src/event_path.js`: `const { eventId, userName } = req.body;`
-        // `src/event_path.js` matches `attendees.name`. 
-        // IF the QR code does not contain the name, we have a problem.
         
-        // CHECKING FRONTEND GENERATION:
-        // `const payload = `${eventId}-${currentUser._id}`;` in dist/index.html
-        // IT DOES NOT CONTAIN NAME.
-        // AND backend checkin uses: `{"attendees.name": userName}` query.
-        
-        // CRITICAL BUG in design: We can't check in by ID if backend requires Name.
-        // OR we need to update backend to check in by ID.
-        // Updating backend is safer.
-        
-        // Let's TRY to find the attendee in our local `this.events` state first to get the name.
-        const event = this.events.find(e => e._id === eid);
-        let userName = 'Unknown';
-        
-        if (event) {
-            const attendee = event.attendees.find(a => a.userId === uid);
-            if (attendee) userName = attendee.name;
-        }
-
-        const res = await this.performCheckin(eid, userName);
+        // Call backend with ID directly
+        const res = await this.performCheckin(eid, uid);
         
         this.showScanResult(res.success, res.message || res.error);
         
@@ -357,7 +335,7 @@ class OrganizerConsole {
         }, 2000);
     }
 
-    async performCheckin(eventId, userName) {
+    async performCheckin(eventId, userId) {
         try {
             const res = await fetch('/api/events/checkin', {
                 method: 'POST',
@@ -365,7 +343,7 @@ class OrganizerConsole {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${this.token}`
                 },
-                body: JSON.stringify({ eventId, userName })
+                body: JSON.stringify({ eventId, userId })
             });
             const data = await res.json();
             if (res.ok) {
@@ -373,7 +351,7 @@ class OrganizerConsole {
                 await this.fetchData();
                 return { success: true, message: 'Access Granted' };
             } else {
-                return { success: false, error: data.error };
+                return { success: false, error: data.error || 'Check-in Failed' };
             }
         } catch (e) {
             return { success: false, error: 'Network Error' };

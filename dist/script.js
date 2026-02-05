@@ -45,8 +45,8 @@ FidaAPI = {
     // --- EVENTS ---
 
     events: {
-        async getAll() {
-            const res = await fetch(`${FidaAPI.BASE_URL}/events`);
+        async getAll(page = 1, limit = 10) {
+            const res = await fetch(`${FidaAPI.BASE_URL}/events?page=${page}&limit=${limit}`);
             return await res.json();
         },
 
@@ -72,7 +72,25 @@ FidaAPI = {
 
     profile: {
         async loadDetails(){
-            return {phone: '9999', city: 'pune'}
+             const token = localStorage.getItem('fida_token');
+             if (!token) return null;
+             
+             // We can reuse the Auth ME endpoint as it now returns profile data
+             const res = await fetch(`${FidaAPI.BASE_URL}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!res.ok) return null;
+            return await res.json();
+        },
+
+        async update(data) {
+             const res = await fetch(`${FidaAPI.BASE_URL}/auth/me`, {
+                method: 'PUT',
+                headers: FidaAPI.getHeaders(),
+                body: JSON.stringify(data)
+            });
+            return await res.json();
         }
     }
 };
