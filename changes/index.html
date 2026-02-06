@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>GigByCity | Ultra UI</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Libre+Barcode+128+Text&display=swap" rel="stylesheet">
+
+    <!-- QR Code Generator Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+          /* =========================================
+             THEME: PLATINUM & CRIMSON (LIGHT PERMANENT)
+             ========================================= */
+          :root {
+              --font-main: 'Space Grotesk', sans-serif;
+              --font-mono: 'JetBrains Mono', monospace;
+              --font-barcode: 'Libre Barcode 128 Text', cursive;
+              
+              /* --- PALETTE --- */
+              --bg-body: #F2F2F4;
+              --bg-dots: #E4E4E7;
+              
+              /* Glass & Surface */
+              --bg-surface: #FFFFFF;
+              --bg-surface-glass: rgba(255, 255, 255, 0.90);
+              --bg-card: #FFFFFF;
+              --bg-card-sub: #F8F8FA;
+              
+              /* Accents */
+              --accent: #E61919;
+              --accent-dim: #C41616;
+              --accent-glow: rgba(230, 25, 25, 0.2);
+              --accent-text: #FFFFFF;
+              --success: #10b981;
+              --warning: #f59e0b;
+              
+              /* Text */
+              --text-main: #18181B;
+              --text-sec: #52525B;
+              --text-muted: #A1A1AA;
+              
+              /* Borders & Depth */
+              --border: rgba(0,0,0,0.06);
+              --border-strong: rgba(0,0,0,0.1);
+              --shadow-sm: 0 4px 12px rgba(0,0,0,0.03);
+              --shadow-md: 0 12px 24px -6px rgba(0,0,0,0.06);
+              --shadow-lg: 0 20px 40px -10px rgba(0,0,0,0.1);
+              
+              /* UI Measurements */
+              --nav-glass: rgba(255, 255, 255, 0.9);
+              --blur-strength: blur(20px);
+              --radius-sm: 14px;
+              --radius-md: 24px;
+              --radius-lg: 32px;
+              
+              --safe-top: env(safe-area-inset-top, 20px);
+              --safe-bottom: env(safe-area-inset-bottom, 20px);
+              --header-height: calc(64px + var(--safe-top));
+              
+              /* Animation */
+              --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+              --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+          }
+
+          * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+          
+          body {
+              background-color: var(--bg-body);
+              color: var(--text-main);
+              font-family: var(--font-main);
+              overflow-x: hidden;
+              padding-bottom: calc(100px + var(--safe-bottom));
+              transition: background 0.4s var(--ease-out), color 0.4s;
+              
+              /* Premium Noise Texture & Dot Grid */
+              background-image: 
+                  radial-gradient(var(--bg-dots) 1px, transparent 1px),
+                  url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+              background-size: 24px 24px, 200px 200px;
+              background-attachment: fixed;
+          }
+
+          /* Scrollbar */
+          ::-webkit-scrollbar { width: 0px; display: none; }
+          .hidden { display: none !important; }
+
+          /* =========================================
+             ANIMATIONS
+             ========================================= */
+          @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+          @keyframes scanline { 0% { transform: translateX(-100%) skewX(-15deg); } 100% { transform: translateX(200%) skewX(-15deg); } }
+          @keyframes pulseSoft { 0% { box-shadow: 0 0 0 0 var(--accent-glow); } 70% { box-shadow: 0 0 0 12px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
+          @keyframes bgDrift { from { transform: scale(1.1); } to { transform: scale(1); } }
+          @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+          @keyframes dashMove { 0% { background-position: 0 0; } 100% { background-position: 20px 0; } }
+
+          /* =========================================
+             COMPONENTS
+             ========================================= */
+          
+          /* Splash */
+          #splashScreen {
+              position: fixed; inset: 0; background: var(--bg-body); z-index: 9999;
+              display: flex; flex-direction: column; align-items: center; justify-content: center;
+              transition: opacity 0.6s ease, visibility 0.6s;
+          }
+          .splash-logo {
+              font-size: 4rem; font-weight: 800; letter-spacing: -0.06em;
+              background: linear-gradient(135deg, var(--text-main), var(--text-muted)); 
+              -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+              margin-bottom: 20px;
+          }
+          .splash-loader {
+              width: 40px; height: 4px; background: var(--border-strong); border-radius: 4px;
+              overflow: hidden; position: relative;
+          }
+          .splash-loader::after {
+              content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 50%;
+              background: var(--accent); animation: scanline 1s infinite linear;
+          }
+
+          /* Header */
+          .app-header {
+              position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+              height: var(--header-height); padding: var(--safe-top) 24px 10px;
+              display: flex; align-items: center; justify-content: space-between;
+              background: linear-gradient(to bottom, var(--bg-body) 60%, rgba(242, 242, 244, 0) 100%);
+              pointer-events: none;
+              backdrop-filter: blur(2px);
+          }
+          .app-header > * { pointer-events: auto; }
+
+          .brand {
+              display: flex; align-items: center; gap: 10px;
+              font-weight: 800; font-size: 1.35rem; letter-spacing: -0.04em; 
+              color: var(--text-main); text-decoration: none;
+          }
+          .brand-mark {
+              width: 10px; height: 10px; background: var(--accent); 
+              border-radius: 2px; transform: rotate(45deg);
+              box-shadow: 0 0 15px var(--accent);
+          }
+
+          .user-pill {
+              background: var(--bg-surface-glass); backdrop-filter: blur(12px);
+              -webkit-backdrop-filter: blur(12px);
+              border: 1px solid var(--border-strong);
+              padding: 5px 5px 5px 14px; border-radius: 100px;
+              display: flex; align-items: center; gap: 10px;
+              cursor: pointer; transition: 0.2s var(--ease-spring);
+              box-shadow: var(--shadow-sm);
+          }
+          .user-pill:active { transform: scale(0.96); }
+          .user-pill span { font-size: 0.85rem; font-weight: 600; font-family: var(--font-mono); color: var(--text-main); }
+          
+          .avatar-circle {
+              width: 34px; height: 34px; border-radius: 50%; 
+              background: var(--bg-card-sub); border: 1px solid var(--border);
+              overflow: hidden; display: flex; align-items: center; justify-content: center;
+              font-size: 0.9rem; font-weight: 700; color: var(--text-sec);
+          }
+          .avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
+
+          /* Views */
+          .view-section { display: none; padding-top: calc(var(--header-height) + 10px); animation: fadeIn 0.4s ease-out; width: 100%; max-width: 800px; margin: 0 auto; }
+          .view-section.active { display: block; }
+
+          /* =========================================
+             NEW OPTIMIZED SEARCH BAR (STICKY TOP)
+             ========================================= */
+          .search-sticky-container {
+              position: sticky;
+              top: calc(var(--header-height) - 10px);
+              z-index: 45;
+              padding: 0 20px 20px;
+              margin-bottom: 8px;
+              pointer-events: auto;
+              /* Gradient fade below search bar */
+              background: linear-gradient(to bottom, var(--bg-body) 40%, rgba(242, 242, 244, 0) 100%);
+          }
+
+          .search-bar-modern {
+              width: 100%;
+              height: 52px;
+              background: rgba(255, 255, 255, 0.85);
+              backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+              border: 1px solid rgba(0,0,0,0.08);
+              border-radius: 100px;
+              display: flex;
+              align-items: center;
+              padding: 0 6px 0 20px;
+              box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+              transition: all 0.3s var(--ease-spring);
+          }
+
+          .search-bar-modern:focus-within {
+              background: #ffffff;
+              border-color: var(--accent);
+              box-shadow: 0 8px 30px rgba(230, 25, 25, 0.15);
+              transform: translateY(-2px);
+          }
+
+          .search-icon {
+              color: var(--text-muted);
+              width: 20px; height: 20px;
+              stroke-width: 2.5;
+              margin-right: 12px;
+              transition: color 0.3s;
+          }
+
+          .search-bar-modern:focus-within .search-icon {
+              color: var(--text-main);
+          }
+
+          .search-input-modern {
+              flex: 1;
+              height: 100%;
+              border: none;
+              background: transparent;
+              font-family: var(--font-main);
+              font-size: 1rem;
+              font-weight: 500;
+              color: var(--text-main);
+              min-width: 0; /* fixes flex shrink issues */
+          }
+          .search-input-modern::placeholder { color: var(--text-muted); font-weight: 400; }
+
+          .search-divider {
+              width: 1px; height: 24px;
+              background: var(--border);
+              margin: 0 8px;
+          }
+
+          .filter-btn-integrated {
+              width: 40px; height: 40px;
+              display: flex; align-items: center; justify-content: center;
+              border-radius: 50%;
+              background: transparent;
+              color: var(--text-sec);
+              cursor: pointer;
+              transition: 0.2s;
+              border: none;
+          }
+          .filter-btn-integrated:hover { background: var(--bg-dots); color: var(--text-main); }
+          .filter-btn-integrated:active { transform: scale(0.9); }
+          
+          .filter-badge {
+              position: absolute; top: 12px; right: 12px;
+              width: 8px; height: 8px; background: var(--accent);
+              border-radius: 50%; display: none;
+          }
+          .filter-btn-integrated.active .filter-badge { display: block; }
+
+
+          /* --- UPDATED CLEAN CAROUSEL --- */
+          .hero { padding: 0 20px 24px; }
+          
+          .hero-carousel {
+              position: relative;
+              height: 400px; /* Slightly refined height */
+              border-radius: var(--radius-lg);
+              overflow: hidden;
+              /* Softer, deeper shadow */
+              box-shadow: 0 20px 40px -10px rgba(0,0,0,0.3);
+              background: #000;
+              transform: translate3d(0,0,0);
+          }
+
+          .carousel-track {
+              display: flex;
+              width: 100%;
+              height: 100%;
+              overflow-x: auto;
+              scroll-snap-type: x mandatory;
+              scrollbar-width: none;
+          }
+          .carousel-track::-webkit-scrollbar { display: none; }
+
+          .hero-slide {
+              min-width: 100%;
+              height: 100%;
+              position: relative;
+              scroll-snap-align: center;
+              display: flex;
+              flex-direction: column;
+              justify-content: flex-end;
+          }
+
+          .hero-bg {
+              position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+              transition: transform 8s ease; z-index: 0;
+          }
+          /* Zoom effect on image */
+          .hero-slide:hover .hero-bg { transform: scale(1.08); }
+          
+          .hero-overlay {
+              position: absolute; inset: 0; z-index: 1;
+              /* Cleaner gradient, easier on the eyes */
+              background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0) 100%);
+          }
+          
+          .hero-content { 
+              position: relative; z-index: 3; pointer-events: none;
+              /* No box, just clean text on image */
+              padding: 32px;
+              opacity: 0; 
+              transform: translateY(20px);
+              transition: opacity 0.6s ease, transform 0.6s ease;
+              text-align: left;
+          }
+          
+          /* Reveal animation when slide is viewed */
+          .hero-slide.in-view .hero-content {
+              opacity: 1;
+              transform: translateY(0);
+          }
+          
+          .carousel-dots {
+              position: absolute; bottom: 32px; right: 32px;
+              display: flex; justify-content: flex-end; gap: 8px; z-index: 10;
+              pointer-events: none;
+          }
+          .dot {
+              width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4);
+              transition: 0.4s var(--ease-spring);
+          }
+          .dot.active { background: #fff; width: 24px; border-radius: 10px; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+
+          .live-badge {
+              display: inline-flex; align-items: center; gap: 8px;
+              background: #ffffff; /* Solid white for maximum contrast */
+              color: #000; 
+              padding: 6px 14px; border-radius: 100px;
+              font-family: var(--font-mono); font-size: 0.75rem; font-weight: 800;
+              margin-bottom: 16px; 
+              box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+          }
+          .pulse-dot { width: 6px; height: 6px; background: #ff0000; border-radius: 50%; box-shadow: none; animation: pulseSoft 1.5s infinite; }
+          
+          .hero-title {
+              font-size: 3.5rem; line-height: 0.9; font-weight: 800; margin-bottom: 8px;
+              letter-spacing: -0.05em; color: white;
+              /* Clean white text, no gradients */
+              text-shadow: 0 2px 15px rgba(0,0,0,0.3);
+          }
+          .hero-desc { 
+              font-size: 1.1rem; color: rgba(255,255,255,0.9); max-width: 90%; 
+              line-height: 1.4; font-weight: 400; 
+              /* Clean vertical accent line */
+              border-left: 3px solid var(--accent); padding-left: 16px;
+              text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+          }
+
+          /* Feed & Tickets */
+          .feed { display: flex; flex-direction: column; gap: 28px; padding: 0 20px 40px; }
+          
+          .ticket {
+              position: relative; perspective: 1000px; cursor: pointer;
+              animation: fadeIn 0.6s backwards;
+          }
+          .ticket-inner {
+              background: var(--bg-card); border-radius: 24px; overflow: hidden;
+              border: 1px solid var(--border); box-shadow: var(--shadow-md);
+              transition: transform 0.4s var(--ease-spring), box-shadow 0.4s;
+              display: flex; flex-direction: column; position: relative;
+          }
+          .ticket:active .ticket-inner { transform: scale(0.98); }
+
+          .ticket-inner::before {
+              content: ""; position: absolute; inset: 0; opacity: 0.03; pointer-events: none;
+              background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+          }
+
+          .ticket-status-bar { height: 6px; width: 100%; background: var(--bg-dots); position: relative; }
+          .ticket.joined .ticket-status-bar { background: var(--accent); box-shadow: 0 0 20px var(--accent); }
+          .ticket.in-hall .ticket-status-bar { background: var(--success); box-shadow: 0 0 20px var(--success); }
+          .ticket.sold-out .ticket-status-bar { background: var(--text-muted); }
+
+          .ticket-content { padding: 28px 28px 24px; position: relative; }
+          .ticket-bg-num {
+              position: absolute; right: 20px; top: 20px;
+              font-family: var(--font-barcode); font-size: 3.5rem; color: var(--text-main); opacity: 0.06;
+              pointer-events: none;
+          }
+
+          .t-header { margin-bottom: 16px; }
+          .t-title { font-size: 1.6rem; font-weight: 800; line-height: 1.05; letter-spacing: -0.04em; margin-bottom: 8px; color: var(--text-main); }
+          .t-loc { 
+              display: inline-flex; align-items: center; gap: 6px; 
+              font-size: 0.8rem; color: var(--text-sec); font-family: var(--font-mono); font-weight: 600;
+              background: var(--bg-card-sub); padding: 4px 10px; border-radius: 6px;
+          }
+          .t-desc {
+              color: var(--text-sec); font-size: 0.95rem; line-height: 1.6;
+              display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+              margin-top: 10px;
+          }
+
+          .t-info-grid {
+              display: grid; grid-template-columns: auto 1fr auto auto; gap: 24px; align-items: center;
+              margin-top: 24px; padding-top: 20px; border-top: 1px dashed var(--border-strong);
+          }
+          .t-cell label { display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 4px; letter-spacing: 0.05em; }
+          .t-cell div { font-size: 1rem; font-weight: 600; font-family: var(--font-mono); color: var(--text-main); }
+          .t-price { color: var(--accent); text-align: right; }
+
+          /* Rip Section */
+          .ticket-rip {
+              height: 24px; position: relative; background: var(--bg-card-sub); margin: 0 12px;
+              border-left: 2px dashed rgba(0,0,0,0.05); border-right: 2px dashed rgba(0,0,0,0.05);
+          }
+          .ticket-rip::before, .ticket-rip::after {
+              content: ''; position: absolute; top: 50%; transform: translateY(-50%);
+              width: 20px; height: 20px; background: var(--bg-body); border-radius: 50%;
+              border: 1px solid var(--border); z-index: 2;
+          }
+          .ticket-rip::before { left: -10px; box-shadow: inset -2px 0 4px rgba(0,0,0,0.05); }
+          .ticket-rip::after { right: -10px; box-shadow: inset 2px 0 4px rgba(0,0,0,0.05); }
+          .rip-line { position: absolute; top: 50%; left: 10px; right: 10px; border-top: 2px dashed var(--border-strong); }
+
+          /* Stub */
+          .ticket-stub {
+              background: var(--bg-card-sub); padding: 20px 28px;
+              display: flex; align-items: center; justify-content: space-between; gap: 12px;
+          }
+          .stub-code { font-family: var(--font-barcode); font-size: 2.2rem; color: var(--text-muted); opacity: 0.7; }
+          
+          .btn-action {
+              flex: 1;
+              height: 44px; padding: 0 24px; background: var(--text-main); color: var(--bg-body);
+              border-radius: 12px; font-weight: 700; font-size: 0.85rem; border: none; cursor: pointer;
+              text-transform: uppercase; font-family: var(--font-mono); letter-spacing: -0.02em;
+              transition: 0.2s var(--ease-spring);
+          }
+          .btn-action:hover { transform: scale(1.05); }
+          .btn-action:active { transform: scale(0.95); }
+          .ticket.joined .btn-action { background: transparent; border: 2px solid var(--border-strong); color: var(--text-main); }
+          
+          .btn-action.sold-out {
+              background: var(--bg-dots); color: var(--text-muted); cursor: not-allowed; border: none;
+          }
+          .btn-action.sold-out:hover { transform: none; }
+          
+          /* Share Button */
+          .btn-share {
+            width: 44px; height: 44px;
+            display: flex; align-items: center; justify-content: center;
+            background: transparent; border: 1px solid var(--border-strong);
+            border-radius: 12px; color: var(--text-main); cursor: pointer;
+            transition: 0.2s;
+          }
+          .btn-share:hover { background: var(--bg-dots); }
+          .btn-share:active { transform: scale(0.9); }
+
+          /* ---- NEW PASSES STYLES (Simpler, Better UI) ---- */
+          .pass-card {
+              background: var(--bg-card);
+              border-radius: 24px;
+              padding: 24px;
+              margin-bottom: 16px;
+              box-shadow: var(--shadow-sm);
+              border: 1px solid var(--border);
+              position: relative;
+              overflow: hidden;
+              transition: transform 0.2s, box-shadow 0.2s;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              min-height: 180px;
+          }
+          .pass-card:active { transform: scale(0.98); }
+          .pass-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+
+          .pass-card.checked-in {
+              background: #f0fdf4; /* Light green tint */
+              border-color: var(--success);
+          }
+
+          .pass-top-row {
+              display: flex; justify-content: space-between; align-items: flex-start;
+              margin-bottom: 12px;
+          }
+          .pass-date {
+              font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: var(--accent);
+              text-transform: uppercase; letter-spacing: 0.05em;
+              margin-bottom: 6px;
+          }
+          .pass-status-pill {
+              font-size: 0.7rem; font-weight: 800; padding: 4px 10px; border-radius: 100px;
+              background: var(--bg-dots); color: var(--text-sec);
+              text-transform: uppercase; letter-spacing: 0.05em;
+          }
+          .pass-card.checked-in .pass-status-pill {
+              background: var(--success); color: white;
+          }
+
+          .pass-title {
+              font-size: 1.6rem; font-weight: 800; line-height: 1; margin-bottom: 8px;
+              color: var(--text-main); letter-spacing: -0.04em;
+          }
+          .pass-loc {
+              font-size: 0.9rem; color: var(--text-sec); display: flex; align-items: center; gap: 6px;
+              font-weight: 500;
+          }
+
+          .pass-actions {
+              margin-top: 24px;
+          }
+          
+          .btn-pass-action {
+              width: 100%; height: 50px;
+              background: var(--text-main); color: var(--bg-body);
+              border-radius: 14px;
+              font-weight: 700; font-size: 0.9rem;
+              display: flex; align-items: center; justify-content: center; gap: 10px;
+              border: none; cursor: pointer;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          }
+          .pass-card.checked-in .btn-pass-action {
+              background: var(--success);
+              box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+          }
+
+          .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); font-family: var(--font-mono); opacity: 0.6; }
+          
+          /* QR Code Container in Ticket */
+          .qr-code-container {
+              display: flex; justify-content: center; align-items: center;
+              padding: 10px; background: white; border-radius: 12px;
+              width: 140px; height: 140px; margin: 0 auto;
+          }
+          .qr-code-container img { width: 100%; height: 100%; object-fit: contain; }
+
+          /* Navigation Dock */
+          .dock-container {
+              position: fixed; bottom: 32px; left: 0; right: 0;
+              display: flex; justify-content: center; pointer-events: none; z-index: 100;
+              padding: 0 16px;
+          }
+          .dock {
+              background: var(--nav-glass); backdrop-filter: var(--blur-strength);
+              -webkit-backdrop-filter: var(--blur-strength);
+              border: 1px solid rgba(255,255,255,0.6);
+              padding: 8px; border-radius: 32px;
+              display: flex; gap: 8px; pointer-events: auto;
+              box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+              align-items: center;
+              max-width: 100%;
+          }
+          .dock-item {
+              width: 48px; height: 48px; border-radius: 20px;
+              display: flex; align-items: center; justify-content: center;
+              color: var(--text-muted); cursor: pointer; transition: 0.4s var(--ease-spring);
+              position: relative;
+              flex-shrink: 0;
+          }
+          .dock-item.active { background: var(--bg-surface); color: var(--text-main); box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+          .dock-item:active { transform: scale(0.9); }
+          
+          /* Modals / Sheets */
+          .overlay {
+              position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(8px);
+              -webkit-backdrop-filter: blur(8px);
+              z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.4s;
+              display: flex; justify-content: center; align-items: flex-end;
+          }
+          .overlay.visible { opacity: 1; pointer-events: auto; }
+          
+          .sheet {
+              width: 100%; max-width: 600px;
+              background: var(--bg-surface);
+              border-top: 1px solid var(--border-strong);
+              border-radius: 36px 36px 0 0;
+              transform: translateY(110%); transition: transform 0.5s var(--ease-spring);
+              z-index: 201; display: flex; flex-direction: column;
+              max-height: 92vh;
+              box-shadow: 0 -10px 40px rgba(0,0,0,0.15); /* Softer sheet shadow */
+              margin: 0 auto;
+          }
+          .overlay.visible .sheet { transform: translateY(0); }
+          
+          /* Sticky Header for Sheets */
+          .sheet-header-sticky {
+              padding: 0 28px 20px; 
+              flex-shrink: 0;
+              background: var(--bg-surface);
+              z-index: 10;
+              display: flex; align-items: center;
+          }
+
+          .sheet-handle { width: 48px; height: 5px; background: var(--border-strong); border-radius: 100px; margin: 16px auto; flex-shrink: 0; }
+          .sheet-body { padding: 0 28px 48px; overflow-y: auto; flex: 1; }
+
+          /* Filter List in Modal */
+          .filter-options {
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+          }
+          .filter-option {
+              padding: 16px;
+              border-radius: 16px;
+              background: var(--bg-card-sub);
+              font-weight: 700;
+              display: flex; justify-content: space-between; align-items: center;
+              cursor: pointer;
+              transition: 0.2s;
+          }
+          .filter-option:hover { background: #f0f0f5; }
+          .filter-option.selected {
+              background: var(--text-main); color: var(--bg-body);
+          }
+          .filter-option.selected .check-icon { opacity: 1; }
+          .check-icon { opacity: 0; transition: 0.2s; }
+
+          .inp-group-icon {
+              background: #fff; border-radius: 18px; padding: 0 20px;
+              height: 64px; display: flex; align-items: center; gap: 14px;
+              border: 1px solid var(--border); transition: 0.2s;
+              box-shadow: var(--shadow-sm);
+          }
+          .inp-group-icon:focus-within { 
+              border-color: var(--accent); 
+              box-shadow: 0 8px 20px rgba(0,0,0,0.06); 
+              transform: translateY(-2px);
+          }
+          .inp-plain {
+              border: none; background: transparent; height: 100%; width: 100%;
+              font-family: var(--font-main); font-size: 1.05rem; color: var(--text-main);
+              font-weight: 600;
+          }
+          
+          /* Auth Screen */
+          .auth-wrap {
+              position: fixed; inset: 0; background: #F2F2F4; z-index: 5000;
+              display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px;
+              transition: transform 0.6s cubic-bezier(0.8, 0, 0.2, 1);
+          }
+          .auth-wrap.hide { transform: translateY(-100%); }
+          
+          /* Professional BG Image */
+          .auth-bg {
+              position: absolute; inset: 0; z-index: -1; overflow: hidden;
+          }
+          .auth-bg img {
+              width: 100%; height: 100%; object-fit: cover;
+              animation: bgDrift 25s infinite alternate ease-in-out;
+              transform-origin: center;
+              filter: saturate(0.8); /* Slightly desaturated for professional look */
+          }
+          .auth-overlay {
+              position: absolute; inset: 0;
+              background: rgba(244, 244, 245, 0.6); /* Frosted Platinum Overlay */
+              backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+          }
+
+          .auth-card { 
+              width: 100%; max-width: 400px; 
+              background: rgba(255, 255, 255, 0.85);
+              backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+              padding: 48px 40px; border-radius: 32px;
+              border: 1px solid rgba(255, 255, 255, 0.6);
+              box-shadow: 0 20px 60px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.5);
+              position: relative;
+          }
+          .auth-header { margin-bottom: 40px; text-align: center; }
+          .auth-logo { 
+              font-size: 3.5rem; font-weight: 800; letter-spacing: -0.06em; 
+              color: var(--text-main); margin-bottom: 8px;
+              background: linear-gradient(135deg, var(--text-main) 0%, var(--text-sec) 100%);
+              -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+          }
+          
+          .inp-group { margin-bottom: 20px; position: relative; }
+          .inp {
+              width: 100%; height: 64px; background: rgba(255,255,255,0.6);
+              border: 1px solid rgba(0,0,0,0.08); border-radius: 20px;
+              padding: 0 24px; font-size: 1.05rem; color: var(--text-main);
+              transition: 0.3s; font-family: var(--font-main);
+              box-shadow: inset 0 2px 4px rgba(0,0,0,0.01);
+          }
+          .inp:focus { 
+              border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-glow); 
+              background: #fff; transform: translateY(-2px); 
+          }
+          
+          .btn-main {
+              width: 100%; height: 64px; background: var(--text-main); color: var(--bg-body);
+              border: none; border-radius: 20px; font-size: 1.05rem; font-weight: 700;
+              margin-top: 12px; cursor: pointer; transition: 0.2s var(--ease-spring);
+              box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+              display: flex; align-items: center; justify-content: center;
+          }
+          .btn-main:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(0,0,0,0.15); }
+          .btn-main:active { transform: scale(0.97); }
+
+          .auth-toggle { margin-top: 32px; text-align: center; font-size: 0.95rem; color: var(--text-sec); display: flex; justify-content: center; gap: 8px; align-items: center; }
+          .btn-text { background: none; border: none; padding: 0; margin: 0; font-family: var(--font-main); font-weight: 700; font-size: 0.95rem; color: var(--text-main); cursor: pointer; text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 4px; }
+
+          .icon { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+          .icon-sm { width: 16px; height: 16px; stroke-width: 2.5; }
+
+          .detail-cover {
+              width: 100%; height: 260px; object-fit: cover; border-radius: 24px;
+              margin-bottom: 28px; border: 1px solid var(--border);
+              box-shadow: var(--shadow-md);
+          }
+
+          .toast {
+              position: fixed; top: 20px; left: 50%; transform: translate(-50%, -100px);
+              background: var(--bg-surface-glass); backdrop-filter: blur(16px);
+              border: 1px solid var(--border-strong); padding: 14px 28px;
+              border-radius: 100px; display: flex; align-items: center; gap: 12px;
+              z-index: 6000; box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+              transition: transform 0.6s var(--ease-spring);
+          }
+          .toast.show { transform: translate(-50%, 0); }
+          .toast-icon { width: 12px; height: 12px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 12px var(--accent); }
+
+          /* FOOTER */
+          .app-footer {
+              text-align: center;
+              padding: 30px 20px 10px;
+              font-size: 0.75rem;
+              color: var(--text-muted);
+              font-family: var(--font-mono);
+              text-transform: uppercase;
+              letter-spacing: 0.1em;
+              opacity: 0.6;
+              margin-top: auto;
+              width: 100%;
+          }
+
+          /* NEW QR MODAL PREMIUM STYLES */
+          .qr-overlay {
+              background: rgba(0,0,0,0.85);
+              backdrop-filter: blur(12px);
+              -webkit-backdrop-filter: blur(12px);
+              align-items: center;
+              justify-content: center;
+              flex-direction: column;
+          }
+          .qr-pass-card {
+              background: #fff;
+              width: 85%;
+              max-width: 320px;
+              border-radius: 24px;
+              overflow: hidden;
+              box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+              position: relative;
+              transform: translateY(20px);
+              transition: transform 0.4s var(--ease-spring);
+          }
+          .qr-overlay.visible .qr-pass-card { transform: translateY(0); }
+          
+          .qr-pass-header {
+              background: var(--text-main);
+              color: #fff;
+              padding: 24px;
+              text-align: center;
+              border-bottom: 2px dashed rgba(255,255,255,0.2);
+              position: relative;
+          }
+          .qr-pass-header::before, .qr-pass-header::after {
+              content: ''; position: absolute; bottom: -10px; width: 20px; height: 20px;
+              background: #000; border-radius: 50%; z-index: 2;
+          }
+          /* Trick to match background color of overlay for cutouts */
+          .qr-pass-header::before { left: -10px; box-shadow: inset -2px 0 0 rgba(255,255,255,0.1); } 
+          .qr-pass-header::after { right: -10px; box-shadow: inset 2px 0 0 rgba(255,255,255,0.1); }
+
+          .qr-pass-title { font-size: 1.4rem; font-weight: 800; line-height: 1.1; margin-bottom: 6px; letter-spacing: -0.03em; }
+          .qr-pass-meta { font-family: var(--font-mono); font-size: 0.8rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em; }
+
+          .qr-code-wrapper {
+              padding: 32px;
+              background: #fff;
+              display: flex; justify-content: center; align-items: center;
+              flex-direction: column;
+              min-height: 250px;
+          }
+
+          .qr-pass-footer {
+              padding: 0 24px 24px;
+              text-align: center;
+          }
+          .qr-user-name { font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 4px; }
+          .qr-admit-label { font-family: var(--font-barcode); font-size: 2.5rem; color: var(--text-muted); opacity: 0.5; line-height: 1; }
+
+          .btn-close-qr {
+              margin-top: 24px;
+              background: rgba(255,255,255,0.15);
+              border: 1px solid rgba(255,255,255,0.2);
+              color: white;
+              padding: 12px 32px;
+              border-radius: 100px;
+              font-weight: 700;
+              cursor: pointer;
+              backdrop-filter: blur(10px);
+              font-size: 0.9rem;
+              transition: 0.2s;
+          }
+          .btn-close-qr:active { transform: scale(0.95); background: rgba(255,255,255,0.25); }
+
+          /* Manual Code Styling */
+          .manual-code-container { display: none; text-align: center; padding: 20px 0; animation: fadeIn 0.3s; }
+          .manual-code-text { font-family: var(--font-mono); font-size: 2rem; font-weight: 800; letter-spacing: 0.1em; color: var(--text-main); border: 2px dashed var(--border-strong); padding: 10px; border-radius: 12px; background: var(--bg-card-sub); word-break: break-all; }
+          .qr-help-btn { background: transparent; border: none; color: var(--text-sec); font-size: 0.85rem; font-weight: 600; text-decoration: underline; margin-top: 16px; cursor: pointer; }
+
+          /* =========================================
+             UPDATED ONBOARDING (PLATINUM THEME)
+             ========================================= */
+          #onboardingModal {
+              position: fixed; inset: 0; 
+              /* Light Mode Frosted Glass Background */
+              background: rgba(242, 242, 244, 0.85); 
+              backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+              z-index: 6000;
+              display: flex; flex-direction: column; align-items: center; justify-content: center;
+              opacity: 0; pointer-events: none; transition: 0.5s;
+          }
+          #onboardingModal.visible { opacity: 1; pointer-events: auto; }
+          
+          .ob-content-card {
+              /* Solid White Card with Premium Shadow */
+              background: #FFFFFF;
+              border: 1px solid rgba(0, 0, 0, 0.05);
+              padding: 40px 30px;
+              border-radius: 32px;
+              width: 88%; max-width: 380px;
+              text-align: center;
+              box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15); /* Softer, lighter shadow */
+              color: var(--text-main); /* Dark text */
+              position: relative;
+              overflow: hidden;
+          }
+          
+          /* Subtle Crimson Glow at top of card */
+          .ob-content-card::after {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.8;
+          }
+
+          .onboarding-slide {
+              display: none; animation: fadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+          }
+          .onboarding-slide.active { display: block; }
+          
+          .ob-img {
+              width: 100%; height: 260px; object-fit: cover; border-radius: 24px;
+              margin-bottom: 28px; 
+              box-shadow: 0 10px 30px rgba(0,0,0,0.08); /* Lighter shadow */
+              border: 1px solid var(--border);
+          }
+          
+          .ob-title { 
+            font-size: 2.2rem; font-weight: 800; margin-bottom: 12px; 
+            letter-spacing: -0.05em; 
+            color: var(--text-main); /* Black Text */
+            text-transform: uppercase;
+            line-height: 0.95;
+          }
+          
+          .ob-desc { 
+            font-size: 1rem; 
+            color: var(--text-sec); /* Dark Gray Text */
+            line-height: 1.5; margin-bottom: 30px; 
+            font-weight: 500; padding: 0 10px; 
+          }
+          
+          .ob-dots { display: flex; justify-content: center; gap: 8px; margin-bottom: 32px; }
+          .ob-dot { 
+            width: 8px; height: 8px; 
+            background: var(--bg-dots); /* Inactive Gray */
+            border-radius: 50%; transition: 0.3s; 
+          }
+          .ob-dot.active { 
+            width: 24px; 
+            background: var(--accent); /* Crimson Active */
+            border-radius: 100px; 
+            box-shadow: 0 0 10px var(--accent-glow); 
+          }
+
+          .btn-ob {
+              width: 100%; height: 56px;
+              background: var(--text-main); /* Black Button */
+              color: white;
+              border-radius: 16px; font-weight: 700; font-size: 1rem;
+              border: none; cursor: pointer;
+              box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+              transition: 0.2s var(--ease-spring);
+              font-family: var(--font-main);
+              letter-spacing: -0.02em;
+          }
+          .btn-ob:hover { transform: translateY(-2px); box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+          .btn-ob:active { transform: scale(0.96); }
+          
+          .btn-ob-skip {
+              background: transparent; color: var(--text-muted);
+              margin-top: 16px; border: none; font-weight: 600; cursor: pointer;
+              font-size: 0.85rem; letter-spacing: 0.05em;
+              transition: color 0.2s;
+              text-transform: uppercase;
+          }
+          .btn-ob-skip:hover { color: var(--text-main); }
+    </style>
+</head>
+<body>
+
+  <!-- SPLASH -->
+  <div id="splashScreen">
+    <div class="splash-logo">GigByCity</div>
+    <div class="splash-loader"></div>
+  </div>
+
+  <!-- ONBOARDING MODAL -->
+  <div id="onboardingModal">
+      <div class="ob-content-card">
+          <!-- Slide 1 -->
+          <div class="onboarding-slide active" data-step="0">
+              <img src="https://i.pinimg.com/1200x/75/eb/9c/75eb9cc57a2da1012e5303011c32d88b.jpg" class="ob-img">
+              <div class="ob-title">Unlock The<br>Grid</div>
+              <div class="ob-desc">Discover exclusive parties, clubs, and festivals.</div>
+          </div>
+          <!-- Slide 2 -->
+          <div class="onboarding-slide" data-step="1">
+              <img src="https://i.pinimg.com/736x/91/08/6c/91086ccf3e1bfb69f65f6f40ddb95ab7.jpg" class="ob-img">
+              <div class="ob-title">Digital<br>Access</div>
+              <div class="ob-desc">No papers. No lost tickets. Just one unique QR pass to access the entire network.</div>
+          </div>
+          <!-- Slide 3 -->
+          <div class="onboarding-slide" data-step="2">
+              <img src="https://i.pinimg.com/736x/65/01/56/650156cfbbd490637236464385fdc5fb.jpg" class="ob-img">
+              <div class="ob-title">Secure<br>Your Spot</div>
+              <div class="ob-desc">Join the community. Find your people. Party, Join Clubs, Make Friends like never before.</div>
+          </div>
+
+          <div class="ob-dots">
+              <div class="ob-dot active" id="obDot0"></div>
+              <div class="ob-dot" id="obDot1"></div>
+              <div class="ob-dot" id="obDot2"></div>
+          </div>
+
+          <button class="btn-ob" onclick="nextOnboarding()">NEXT STEP</button>
+          <button class="btn-ob-skip" onclick="closeOnboarding()">Skip Intro</button>
+      </div>
+  </div>
+
+  <!-- AUTH -->
+  <div id="authScreen" class="auth-wrap">
+    
+    <!-- Professional Background -->
+    <div class="auth-bg">
+        <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2069&auto=format&fit=crop" alt="Abstract Office">
+        <div class="auth-overlay"></div>
+    </div>
+
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">GigByCity</div>
+            <p id="authSubtitle" style="color:var(--text-sec); font-size:1.1rem; font-weight:500;">Access the grid.</p>
+        </div>
+        <form onsubmit="handleAuth(event)">
+            <div class="inp-group" id="nameContainer">
+                <input type="text" id="authName" class="inp" placeholder="Name" required>
+            </div>
+            <div class="inp-group">
+                <input type="email" id="authEmail" class="inp" placeholder="Email" required>
+            </div>
+            <div class="inp-group">
+                <input type="password" id="authPass" class="inp" placeholder="Password" required>
+            </div>
+            <button class="btn-main" id="authBtn">JOIN NOW</button>
+        </form>
+        <div class="auth-toggle">
+            <span id="authToggleText">Already in the system?</span>
+            <button class="btn-text" onclick="toggleAuthMode()">Login</button>
+        </div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <a href="#" class="brand">
+      <div class="brand-mark"></div>
+      GigByCity
+    </a>
+    <div class="user-pill" onclick="switchView('settings', document.querySelector('.dock-item:last-child'))">
+        <span id="headerName">GUEST</span>
+        <div class="avatar-circle" id="headerAvatar">G</div>
+    </div>
+  </header>
+
+  <!-- HOME FEED VIEW -->
+  <div id="viewHome" class="view-section active">
+    
+    <!-- Hero Carousel -->
+    <section class="hero">
+        <div class="hero-carousel">
+            <div class="carousel-track" id="heroTrack">
+                <!-- Slide 1 -->
+                <div class="hero-slide active">
+                    <img src="https://i.pinimg.com/736x/ac/fa/07/acfa075232e1fa71a0546c9112b6f877.jpg" class="hero-bg" alt="Event">
+                    <div class="hero-overlay"></div>
+                    <div class="hero-content">
+                        <div class="live-badge"><div class="pulse-dot"></div> LIVE NOW</div>
+                        <h2 class="hero-title">HOUSE<br>PARTY'S</h2>
+                        <p class="hero-desc">Party Like Never Before.</p>
+                    </div>
+                </div>
+                 <!-- Slide 2 -->
+                 <div class="hero-slide">
+                    <img src="https://www.nme.com/wp-content/uploads/2021/10/The-Beatles_-Get-Back.jpg" class="hero-bg" alt="Jazz">
+                    <div class="hero-overlay"></div>
+                    <div class="hero-content">
+                        <div class="live-badge" style="border-color:rgba(100,100,255,0.4); color:#aaaaff; background:rgba(50,50,200,0.2);">UP NEXT</div>
+                        <h2 class="hero-title">THE<br>BEATLES</h2>
+                        <p class="hero-desc">Relive the beatles era.</p>
+                    </div>
+                </div>
+                 <!-- Slide 3 -->
+                 <div class="hero-slide">
+                    <img src="https://i.pinimg.com/1200x/be/75/ab/be75ab8d6adae0610b56b0812f4feb98.jpg" class="hero-bg" alt="Market">
+                    <div class="hero-overlay"></div>
+                    <div class="hero-content">
+                        <div class="live-badge" style="border-color:rgba(255,200,0,0.4); color:#ffcc00; background:rgba(200,150,0,0.2);">TRENDING</div>
+                        <h2 class="hero-title">RUNNING<br>CLUB</h2>
+                        <p class="hero-desc">Run with people who are like you.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="carousel-dots">
+                <div class="dot active"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NEW STICKY SEARCH BAR -->
+    <div class="search-sticky-container">
+        <div class="search-bar-modern">
+            <svg class="icon search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" class="search-input-modern" placeholder="Search events, places..." onkeyup="handleSearch(this.value)">
+            <div class="search-divider"></div>
+            <button class="filter-btn-integrated" id="filterBtn" onclick="openFilterModal()">
+                 <svg class="icon" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                 <div class="filter-badge"></div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Feed -->
+    <div id="clubsContainer" class="feed" style="margin-top:0;"></div>
+    
+    <!-- Footer -->
+    <div class="app-footer">Made By KENBRISELLERIS</div>
+  </div>
+
+  <!-- MY PASSES VIEW -->
+  <div id="viewPasses" class="view-section">
+      <div style="padding: 20px; font-size:1.8rem; font-weight:800; letter-spacing:-0.03em;">My Passes</div>
+      <div id="passesContainer" class="feed" style="padding: 0 20px 40px;"></div>
+      <div class="app-footer">Made By KENBRISELLERIS</div>
+  </div>
+
+  <!-- SETTINGS / PROFILE VIEW (Cleaned) -->
+  <div id="viewSettings" class="view-section">
+      <div style="padding: 20px; font-size:1.8rem; font-weight:800; letter-spacing:-0.03em;">Profile & Settings</div>
+      <div style="padding: 0 20px;">
+          
+          <!-- Avatar Section -->
+          <div style="text-align: center; margin-bottom: 24px;">
+              <div style="width: 100px; height: 100px; background: var(--bg-dots); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700; overflow:hidden; border:2px solid var(--border);" id="settingsAvatar"></div>
+              <label style="background: var(--bg-card-sub); border: 1px solid var(--border); padding: 8px 16px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; cursor: pointer; color: var(--text-sec);">
+                  Change Photo <input type="file" hidden accept="image/*" onchange="updateAvatar(this)">
+              </label>
+          </div>
+
+          <!-- Profile Form -->
+          <form onsubmit="saveProfile(event)" style="background: white; padding: 24px; border-radius: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 24px;">
+              
+              <div class="form-section" style="margin-bottom: 20px;">
+                  <label class="form-label">Contact Info</label>
+                  <div class="inp-group-icon" style="margin-bottom: 12px;">
+                      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                      <input type="text" id="pName" class="inp-plain" placeholder="Full Name" required>
+                  </div>
+                  <div class="inp-group-icon" style="margin-bottom: 12px;">
+                      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                      <input type="email" id="pEmail" class="inp-plain" placeholder="Email Address" required>
+                  </div>
+                  <div class="inp-group-icon" style="margin-bottom: 12px;">
+                      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                      <input type="tel" id="pPhone" class="inp-plain" placeholder="Phone Number">
+                  </div>
+                  <div class="inp-group-icon">
+                      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                      <input type="text" id="pCity" class="inp-plain" placeholder="City / Sector">
+                  </div>
+              </div>
+
+              <button class="btn-main" style="height: 56px;">SAVE CHANGES</button>
+          </form>
+
+          <!-- Settings List -->
+          <div style="background: white; border-radius: 24px; overflow: hidden; border: 1px solid var(--border); margin-bottom:40px;">
+              
+              <!-- App Info -->
+              <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                  <div style="display:flex; align-items:center; gap:12px;">
+                      <div style="width:32px; height:32px; background:var(--bg-card-sub); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                          <svg class="icon-sm" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                      </div>
+                      <span style="font-weight:600;">App Version</span>
+                  </div>
+                  <span style="color: var(--text-muted); font-family: var(--font-mono);">v2.9.0</span>
+              </div>
+
+              <!-- About Company -->
+              <div onclick="openInfoSheet('about')" style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                  <div style="display:flex; align-items:center; gap:12px;">
+                      <div style="width:32px; height:32px; background:var(--bg-card-sub); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M3 21h18"></path><path d="M5 21V7l8-4 8 4v14"></path><path d="M17 21v-8.5a1.5 1.5 0 0 0-1.5-1.5h-5a1.5 1.5 0 0 0-1.5 1.5V21"></path></svg>
+                      </div>
+                      <span style="font-weight:600;">About Company</span>
+                  </div>
+                  <svg class="icon-sm" style="color:var(--text-muted);" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </div>
+
+              <!-- Privacy -->
+              <div onclick="openInfoSheet('privacy')" style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                  <div style="display:flex; align-items:center; gap:12px;">
+                      <div style="width:32px; height:32px; background:var(--bg-card-sub); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                          <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      </div>
+                      <span style="font-weight:600;">Privacy & Security</span>
+                  </div>
+                  <svg class="icon-sm" style="color:var(--text-muted);" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </div>
+
+              <!-- Logout -->
+                <div onclick="logout()" style="padding: 16px 20px; color: #ef4444; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                  <div style="display:flex; align-items:center; gap:12px;">
+                      <div style="width:32px; height:32px; background:rgba(239, 68, 68, 0.1); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                          <svg class="icon-sm" style="color:#ef4444;" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                      </div>
+                      <span>Log Out</span>
+                  </div>
+              </div>
+          </div>
+      </div>
+      <div class="app-footer">Made By KENBRISELLERIS</div>
+  </div>
+
+  <!-- DOCK (Cleaned - Removed Search, Create & Host) -->
+  <div class="dock-container">
+    <div class="dock">
+        <!-- Home -->
+        <div class="dock-item active" onclick="switchView('home', this)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        </div>
+        <!-- My Passes -->
+        <div class="dock-item" onclick="switchView('passes', this)">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </div>
+        <!-- Profile / Settings -->
+        <div class="dock-item" onclick="switchView('settings', this)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </div>
+    </div>
+  </div>
+
+  <!-- MODALS -->
+
+  <!-- Generic Info Modal (Used for Privacy/Company) -->
+  <div id="infoModal" class="overlay">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header-sticky">
+             <div style="display:flex; align-items:center;">
+                 <button onclick="document.getElementById('infoModal').classList.remove('visible')" style="background:transparent; border:1px solid var(--border); width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-main); margin-right:12px;">
+                    <svg class="icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                 </button>
+                 <span style="font-weight:700; font-size:0.9rem; color:var(--text-sec);">BACK</span>
+            </div>
+        </div>
+        <div class="sheet-body" id="infoContent"></div>
+    </div>
+  </div>
+
+  <!-- QR Display Modal (UPDATED PREMIUM UI WITH FALLBACK) -->
+  <div id="qrDisplayModal" class="overlay qr-overlay">
+      <div class="qr-pass-card">
+          <div class="qr-pass-header">
+              <div id="qrPassTitle" class="qr-pass-title">EVENT TITLE</div>
+              <div id="qrPassMeta" class="qr-pass-meta">DATE • TIME</div>
+          </div>
+          
+          <div class="qr-code-wrapper">
+              <!-- Default QR View -->
+              <div id="qrModalTarget"></div>
+              
+              <!-- NEW: Fallback Manual Code View (Hidden by default) -->
+              <div id="manualCodeTarget" class="manual-code-container">
+                 <div style="font-size:0.8rem; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">Manual Entry Code</div>
+                 <div class="manual-code-text" id="manualCodeText"></div>
+                 <div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">Show this to security at the gate.</div>
+              </div>
+          </div>
+          
+          <div style="text-align:center; padding-bottom:20px;">
+              <button class="qr-help-btn" id="qrHelpBtn" onclick="toggleQrManualMode()">Trouble scanning? Show Code</button>
+          </div>
+
+          <div class="qr-pass-footer">
+              <div class="qr-user-name" id="qrPassUser">USER NAME</div>
+              <div class="qr-admit-label">ADMIT ONE</div>
+          </div>
+          <div class="qr-rip-decoration"></div>
+      </div>
+      <button onclick="document.getElementById('qrDisplayModal').classList.remove('visible')" class="btn-close-qr">CLOSE PASS</button>
+  </div>
+
+  <!-- Details Sheet -->
+  <div id="detailsModal" class="overlay">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header-sticky">
+             <div style="display:flex; align-items:center;">
+                 <button onclick="document.getElementById('detailsModal').classList.remove('visible')" style="background:transparent; border:1px solid var(--border); width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-main); margin-right:12px;">
+                    <svg class="icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                 </button>
+                 <span style="font-weight:700; font-size:0.9rem; color:var(--text-sec);">BACK</span>
+            </div>
+        </div>
+        <div class="sheet-body" id="detailsContent"></div>
+    </div>
+  </div>
+
+  <!-- Filter Modal Sheet -->
+  <div id="filterModal" class="overlay">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header-sticky">
+             <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                 <span style="font-weight:800; font-size:1.1rem;">FILTER EVENTS</span>
+                 <button onclick="closeFilterModal()" style="background:transparent; border:none; font-weight:700; color:var(--text-main); font-size:0.9rem;">DONE</button>
+            </div>
+        </div>
+        <div class="sheet-body">
+            <div class="filter-options">
+                <div class="filter-option selected" onclick="applyFilterOption('ALL', this)">
+                    <span>ALL EVENTS</span>
+                    <svg class="icon-sm check-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div class="filter-option" onclick="applyFilterOption('PARTY', this)">
+                    <span>PARTY</span>
+                    <svg class="icon-sm check-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div class="filter-option" onclick="applyFilterOption('RACE', this)">
+                    <span>RACE</span>
+                    <svg class="icon-sm check-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div class="filter-option" onclick="applyFilterOption('SHOW', this)">
+                    <span>SHOW</span>
+                    <svg class="icon-sm check-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div class="filter-option" onclick="applyFilterOption('MEET', this)">
+                    <span>MEET</span>
+                    <svg class="icon-sm check-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">
+      <div class="toast-icon"></div>
+      <span id="toastMsg" style="font-weight:600; font-size:0.95rem;">Notification</span>
+  </div>
+
+  <script>
+    /* =========================================
+       APP LOGIC
+       ========================================= */
+    
+    // Initial data for fresh state
+    const defaultEvents = [
+        {
+            id: 'e1',
+            title: 'CYBER JAZZ',
+            desc: 'Late night smooth synth-jazz sessions in the lower district.',
+            date: '2023-11-24',
+            time: '22:00',
+            location: 'Sector 7, The Basement',
+            price: 0,
+            image: 'https://images.unsplash.com/photo-1514525253440-b393452e8d26?q=80&w=1974&auto=format&fit=crop',
+            attendees: [],
+            mode: 'offline',
+            maxAttendees: 50,
+            category: 'SHOW'
+        },
+        {
+            id: 'e2',
+            title: 'RED PROTOCOL',
+            desc: 'Experimental tech showcase and visual art installation.',
+            date: '2023-11-26',
+            time: '18:00',
+            location: 'Gallery 404',
+            price: 0,
+            image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop',
+            attendees: [],
+            mode: 'offline',
+            maxAttendees: 100,
+            category: 'SHOW'
+        },
+        {
+            id: 'e3',
+            title: 'NIGHT MARKET',
+            desc: 'Street food, rare parts, and neon lights.',
+            date: '2023-11-28',
+            time: '20:00',
+            location: 'Old Port District',
+            price: 0,
+            image: 'https://images.unsplash.com/photo-1555685812-4b943f1cb0eb?q=80&w=2070&auto=format&fit=crop',
+            attendees: [],
+            mode: 'offline',
+            maxAttendees: 200,
+            category: 'MEET'
+        },
+        {
+            id: 'e4',
+            title: 'MINECRAFT BUILD CLUB',
+            desc: 'Weekly survival server launch. Join the faction and build the ultimate base.',
+            date: '2023-12-01',
+            time: '16:00',
+            location: 'mc.fida.io',
+            price: 0,
+            image: 'https://images.unsplash.com/photo-1607513168936-96c2e027d7de?q=80&w=2070&auto=format&fit=crop',
+            attendees: [],
+            mode: 'online',
+            maxAttendees: 20,
+            category: 'MEET'
+        },
+        {
+            id: 'e5',
+            title: 'NEON RUNNERS',
+            desc: '5K Night Run through the neon district. All paces welcome.',
+            date: '2023-12-03',
+            time: '21:00',
+            location: 'Central Plaza Start',
+            price: 0,
+            image: 'https://images.unsplash.com/photo-1533561098132-753995fad2d8?q=80&w=2070&auto=format&fit=crop',
+            attendees: [],
+            mode: 'offline',
+            maxAttendees: Infinity,
+            category: 'RACE'
+        },
+        {
+            id: 'e6',
+            title: 'ROOFTOP RAVE',
+            desc: 'High BPM, low lights, massive speakers.',
+            date: '2023-12-05',
+            time: '23:00',
+            location: 'Tower 9 Deck',
+            price: 0,
+            image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=2070&auto=format&fit=crop',
+            attendees: [],
+            mode: 'offline',
+            maxAttendees: 150,
+            category: 'PARTY'
+        }
+    ];
+
+    // State
+    const state = {
+        user: JSON.parse(localStorage.getItem('fida_user')) || null,
+        isLoginMode: false,
+        events: JSON.parse(localStorage.getItem('fida_all_events')) || defaultEvents,
+        passes: JSON.parse(localStorage.getItem('fida_passes')) || [],
+    };
+
+    // Global variables
+    let currentFilter = 'ALL';
+    let currentSearchQuery = '';
+
+    // Carousel Vars
+    let currentSlide = 0;
+    let carouselInterval;
+
+    // Helper to persist master event list
+    function saveEvents() {
+        localStorage.setItem('fida_all_events', JSON.stringify(state.events));
+    }
+
+    // --- INIT ---
+    window.onload = () => {
+        setTimeout(() => {
+            document.getElementById('splashScreen').style.opacity = '0';
+            setTimeout(() => document.getElementById('splashScreen').classList.add('hidden'), 600);
+            
+            if(!state.user) {
+                document.getElementById('authScreen').classList.remove('hide');
+            } else {
+                document.getElementById('authScreen').classList.add('hide');
+                updateUserUI();
+            }
+            renderFeed();
+            renderPasses();
+            startCarousel();
+
+            // Check for deep link event sharing
+            const urlParams = new URLSearchParams(window.location.search);
+            const evtId = urlParams.get('evt');
+            if(evtId) {
+                 // Found a shared event ID in URL, open details
+                 setTimeout(() => {
+                     openDetails(evtId);
+                 }, 800);
+            }
+
+        }, 1500);
+    };
+
+    // --- ONBOARDING LOGIC ---
+    let obStep = 0;
+    
+    function showOnboarding() {
+        document.getElementById('onboardingModal').classList.add('visible');
+        renderObSlide(0);
+    }
+
+    function renderObSlide(index) {
+        obStep = index;
+        document.querySelectorAll('.onboarding-slide').forEach((s, i) => {
+            s.classList.toggle('active', i === index);
+        });
+        document.querySelectorAll('.ob-dot').forEach((d, i) => {
+            d.classList.toggle('active', i === index);
+        });
+        
+        const btn = document.querySelector('#onboardingModal .btn-ob');
+        if(index === 2) {
+            btn.textContent = "GET STARTED";
+        } else {
+            btn.textContent = "NEXT";
+        }
+    }
+
+    function nextOnboarding() {
+        if(obStep < 2) {
+            renderObSlide(obStep + 1);
+        } else {
+            closeOnboarding();
+        }
+    }
+
+    function closeOnboarding() {
+        document.getElementById('onboardingModal').classList.remove('visible');
+    }
+
+    // --- INFO SHEET LOGIC (Privacy/Company) ---
+    function openInfoSheet(type) {
+        const modal = document.getElementById('infoModal');
+        const content = document.getElementById('infoContent');
+        
+        if (type === 'about') {
+            content.innerHTML = `
+                <div style="text-align:center; margin-bottom:20px;">
+                    <div style="font-size:2.5rem; font-weight:800; margin-bottom:8px;">Kenbriselleris Inc.</div>
+                    <div style="font-family:var(--font-mono); color:var(--text-muted); font-size:0.9rem;">EST. 2024</div>
+                </div>
+                <p style="line-height:1.6; color:var(--text-sec); margin-bottom:16px;">
+                    Kenbriselleris Inc. is a forward-thinking digital collective focused on bridging the gap between underground culture and modern technology.
+                </p>
+                <p style="line-height:1.6; color:var(--text-sec); margin-bottom:16px;">
+                    Founded in the neon-lit sectors of the digital frontier, we build tools that empower creators, organizers, and communities to connect seamlessly.
+                </p>
+                <div style="background:var(--bg-card-sub); padding:16px; border-radius:12px; margin-top:20px;">
+                    <div style="font-weight:700; margin-bottom:4px;">Headquarters</div>
+                    <div style="color:var(--text-muted);">Sector 7, Tech District</div>
+                </div>
+            `;
+        } else if (type === 'privacy') {
+            content.innerHTML = `
+                <h2 style="font-size:1.8rem; font-weight:800; margin-bottom:16px;">Privacy & Security</h2>
+                <p style="line-height:1.6; color:var(--text-sec); margin-bottom:24px;">
+                    Your data stays on the grid, but under your control. At GigByCity, we prioritize local-first architecture.
+                </p>
+                
+                <h4 style="font-weight:700; margin-bottom:8px;">1. Data Storage</h4>
+                <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">
+                    All user preferences, event passes, and hosting data are stored locally on your device via LocalStorage. We do not transmit your personal data to external servers.
+                </p>
+
+                <h4 style="font-weight:700; margin-bottom:8px;">2. Camera Access</h4>
+                <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">
+                    Camera access is required strictly for scanning QR codes during event check-in. No video feeds are recorded or sent to the cloud.
+                </p>
+
+                <h4 style="font-weight:700; margin-bottom:8px;">3. Anonymity</h4>
+                <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">
+                    You are free to use any alias. We do not verify government IDs, ensuring the underground remains underground.
+                </p>
+            `;
+        }
+        
+        modal.classList.add('visible');
+    }
+
+    // --- CAROUSEL LOGIC ---
+    function startCarousel() {
+        const track = document.getElementById('heroTrack');
+        const dots = document.querySelectorAll('.dot');
+        const slides = document.querySelectorAll('.hero-slide');
+        
+        if(!track) return;
+
+        // Auto Scroll
+        carouselInterval = setInterval(() => {
+            currentSlide = (currentSlide + 1) % slides.length;
+            scrollToSlide(currentSlide);
+        }, 4000);
+
+        // Allow manual scroll (simple intersection observer to update dots if user swipes)
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if(entry.isIntersecting) {
+                    // Update index based on visual
+                    const index = Array.from(slides).indexOf(entry.target);
+                    // Only update if it's a manual interaction to avoid fighting the interval
+                    // But we need to sync currentSlide so the next interval doesn't jump back
+                     currentSlide = index;
+                    
+                    // Reset all
+                    slides.forEach(s => s.classList.remove('in-view'));
+                    // Set active
+                    if(slides[index]) slides[index].classList.add('in-view');
+                    
+                    updateDots(currentSlide);
+                }
+            });
+        }, { threshold: 0.6 });
+
+        slides.forEach(slide => observer.observe(slide));
+        
+        // Initial state
+        if(slides[0]) slides[0].classList.add('in-view');
+        
+        // Pause on touch
+        track.addEventListener('touchstart', () => clearInterval(carouselInterval));
+        track.addEventListener('touchend', () => {
+             clearInterval(carouselInterval);
+             carouselInterval = setInterval(() => {
+                currentSlide = (currentSlide + 1) % slides.length;
+                scrollToSlide(currentSlide);
+             }, 4000);
+        });
+    }
+
+    function scrollToSlide(index) {
+        const track = document.getElementById('heroTrack');
+        // FIXED: Replaced scrollIntoView with track.scrollTo to prevent entire page from jumping/scrolling up
+        if(track) {
+            const slideWidth = track.offsetWidth;
+            track.scrollTo({
+                left: slideWidth * index,
+                behavior: 'smooth'
+            });
+            updateDots(index);
+        }
+    }
+
+    function updateDots(index) {
+        document.querySelectorAll('.dot').forEach((d, i) => {
+            d.classList.toggle('active', i === index);
+        });
+    }
+
+    // --- AUTH & PROFILE ---
+    function toggleAuthMode() {
+        state.isLoginMode = !state.isLoginMode;
+        const nameContainer = document.getElementById('nameContainer');
+        const title = document.getElementById('authSubtitle');
+        const btn = document.getElementById('authBtn');
+        const toggleText = document.getElementById('authToggleText');
+        
+        if(state.isLoginMode) {
+            nameContainer.classList.add('hidden');
+            document.getElementById('authName').required = false;
+            title.textContent = 'Welcome back, operative.';
+            btn.textContent = 'LOG IN';
+            toggleText.textContent = "New here?";
+        } else {
+            nameContainer.classList.remove('hidden');
+            document.getElementById('authName').required = true;
+            title.textContent = 'Access the grid.';
+            btn.textContent = 'JOIN NOW';
+            toggleText.textContent = "Already in the system?";
+        }
+    }
+
+    function handleAuth(e) {
+        e.preventDefault();
+        const name = document.getElementById('authName').value;
+        const email = document.getElementById('authEmail').value;
+        
+        state.user = {
+            name: state.isLoginMode ? 'Operative' : name,
+            email: email,
+            avatar: null,
+            phone: '',
+            city: ''
+        };
+        localStorage.setItem('fida_user', JSON.stringify(state.user));
+        
+        document.getElementById('authScreen').classList.add('hide');
+        updateUserUI();
+        
+        // Only show onboarding if this was a NEW sign up (not a login)
+        if(!state.isLoginMode) {
+            setTimeout(() => {
+                showOnboarding();
+            }, 500);
+        } else {
+            showToast(`Welcome back, ${state.user.name}`);
+        }
+    }
+
+    function updateUserUI() {
+        if(!state.user) return;
+        document.getElementById('headerName').textContent = state.user.name.toUpperCase();
+        
+        // Populate Header Avatar
+        if(state.user.avatar) {
+            const img = `<img src="${state.user.avatar}">`;
+            document.getElementById('headerAvatar').innerHTML = img;
+            document.getElementById('settingsAvatar').innerHTML = img;
+        } else {
+            const initial = state.user.name.charAt(0).toUpperCase();
+            document.getElementById('headerAvatar').textContent = initial;
+            document.getElementById('settingsAvatar').textContent = initial;
+        }
+
+        // Populate Profile Forms (Cleaned)
+        document.getElementById('pName').value = state.user.name || '';
+        document.getElementById('pEmail').value = state.user.email || '';
+        document.getElementById('pPhone').value = state.user.phone || '';
+        document.getElementById('pCity').value = state.user.city || '';
+    }
+
+    function saveProfile(e) {
+        e.preventDefault();
+        if(!state.user) return;
+
+        state.user.name = document.getElementById('pName').value;
+        state.user.email = document.getElementById('pEmail').value;
+        state.user.phone = document.getElementById('pPhone').value;
+        state.user.city = document.getElementById('pCity').value;
+
+        localStorage.setItem('fida_user', JSON.stringify(state.user));
+        updateUserUI();
+        showToast('Profile Saved');
+    }
+
+    function logout() {
+        localStorage.removeItem('fida_user');
+        location.reload();
+    }
+
+    function updateAvatar(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                state.user.avatar = e.target.result;
+                localStorage.setItem('fida_user', JSON.stringify(state.user));
+                updateUserUI();
+                showToast('Identity updated');
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // --- NAVIGATION ---
+    function switchView(viewName, el) {
+        document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+        const targetId = viewName === 'home' ? 'viewHome' : 
+                         viewName === 'passes' ? 'viewPasses' : 'viewSettings';
+        document.getElementById(targetId).classList.add('active');
+        
+        document.querySelectorAll('.dock-item').forEach(i => i.classList.remove('active'));
+        if(el) el.classList.add('active');
+        
+        window.scrollTo(0,0);
+    }
+
+    // --- FEED & FILTERING ---
+    function openFilterModal() {
+        document.getElementById('filterModal').classList.add('visible');
+    }
+
+    function closeFilterModal() {
+        document.getElementById('filterModal').classList.remove('visible');
+    }
+
+    function applyFilterOption(filterType, el) {
+        currentFilter = filterType;
+        // Update selection UI
+        document.querySelectorAll('.filter-option').forEach(o => o.classList.remove('selected'));
+        el.classList.add('selected');
+
+        // Update badge visibility on main button
+        const btn = document.querySelector('.filter-btn-integrated');
+        if(filterType !== 'ALL') {
+             btn.classList.add('active');
+        } else {
+             btn.classList.remove('active');
+        }
+        
+        // Re-render and close
+        renderFeed();
+        closeFilterModal();
+    }
+
+    // --- SHARE FUNCTIONALITY ---
+    function shareEvent(event, id) {
+        event.stopPropagation();
+        const ev = state.events.find(e => e.id === id);
+        if(!ev) return;
+
+        // Construct share URL (Current URL + ?evt=id)
+        // If query string exists, replace it, otherwise append
+        const baseUrl = window.location.origin + window.location.pathname;
+        const shareUrl = `${baseUrl}?evt=${id}`;
+        
+        const shareData = {
+            title: `GigByCity: ${ev.title}`,
+            text: `Join me at ${ev.title} in ${ev.location}!`,
+            url: shareUrl
+        };
+
+        // Try Native Share API first (Mobile)
+        if (navigator.share) {
+            navigator.share(shareData)
+                .then(() => console.log('Shared successfully'))
+                .catch((error) => console.log('Error sharing', error));
+        } else {
+            // Fallback to Clipboard
+            const textArea = document.createElement("textarea");
+            textArea.value = shareUrl;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Link copied to clipboard');
+            } catch (err) {
+                showToast('Failed to copy link');
+            }
+            document.body.removeChild(textArea);
+        }
+    }
+
+    function renderFeed() {
+        const container = document.getElementById('clubsContainer');
+        container.innerHTML = '';
+        
+        // 1. Text Search Filter
+        let filtered = state.events.filter(e => 
+            e.title.toLowerCase().includes(currentSearchQuery.toLowerCase()) || 
+            e.location.toLowerCase().includes(currentSearchQuery.toLowerCase())
+        );
+
+        // 2. Category Filter
+        if(currentFilter !== 'ALL') {
+            filtered = filtered.filter(e => e.category === currentFilter);
+        }
+
+        if(filtered.length === 0) {
+            container.innerHTML = `<div class="empty-state">No events found matching criteria.</div>`;
+            return;
+        }
+
+        // 3. SORT: Newest created (highest ID or index) to top
+        // Since default events are e1...e6, e6 is newest. User created ones come after.
+        // We simply reverse the filtered array for display.
+        filtered.reverse();
+
+        filtered.forEach(event => {
+            const isJoined = state.passes.includes(event.id);
+            
+            // Default to offline if property missing
+            const isOnline = event.mode === 'online';
+            const locIcon = isOnline ? '🌐' : '📍';
+            
+            const count = event.attendees ? event.attendees.length : 0;
+            const max = event.maxAttendees || Infinity;
+            const isSoldOut = count >= max;
+
+            // NEW: Calculate Spots Left for Display
+            // If max is Infinity, just show "Open" or count, but here we want spots left
+            // Let's format it as "X / Y" for clarity in "Spots Left" column
+            let spotsDisplay = max === Infinity ? '∞' : Math.max(0, max - count);
+            let displayLabel = max === Infinity ? 'Open' : `${spotsDisplay} / ${max}`;
+
+
+            let badgeHtml = '';
+            if (isSoldOut && !isJoined) {
+                badgeHtml = '<div style="background:var(--text-main); color:var(--bg-body); font-size:0.7rem; font-weight:800; padding:4px 8px; border-radius:4px; position:absolute; top:20px; right:20px;">SOLD OUT</div>';
+            }
+
+            // Determine Button State
+            let btnLabel = isJoined ? 'GOT PASS' : (isSoldOut ? 'FULL' : 'GET PASS');
+            let btnAction = `event.stopPropagation(); toggleJoin('${event.id}')`;
+            let btnClass = isSoldOut && !isJoined ? 'sold-out' : '';
+
+            // Share Action
+            let shareAction = `shareEvent(event, '${event.id}')`;
+
+            const html = `
+                <div class="ticket ${isJoined ? 'joined' : ''}" onclick="openDetails('${event.id}')">
+                    <div class="ticket-inner">
+                        <div class="ticket-status-bar"></div>
+                        ${badgeHtml}
+                        <div class="ticket-bg-num">0${event.id.replace('e','').replace('h','')}</div>
+                        <div class="ticket-content">
+                            <div class="t-header">
+                                <div class="t-title">${event.title}</div>
+                                <div style="display:flex; gap:6px;">
+                                    <div class="t-loc">${locIcon} ${event.location}</div>
+                                    <div class="t-loc" style="background:var(--border);">${event.category || 'EVENT'}</div>
+                                </div>
+                            </div>
+                            <div class="t-desc">${event.desc}</div>
+                            <div class="t-info-grid">
+                                <div class="t-cell"><label>Date</label><div>${formatDate(event.date)}</div></div>
+                                <div class="t-cell"><label>Time</label><div>${event.time}</div></div>
+                                <!-- UPDATED: Spots Left logic working perfectly -->
+                                <div class="t-cell"><label>Spots Left</label><div>${displayLabel}</div></div>
+                                <div class="t-cell t-price"><div>${event.price === 0 ? 'FREE' : '$'+event.price}</div></div>
+                            </div>
+                        </div>
+                        <div class="ticket-rip">
+                            <div class="rip-line"></div>
+                        </div>
+                        <div class="ticket-stub">
+                            <div class="stub-code">129394</div>
+                            <button class="btn-action ${btnClass}" onclick="${btnAction}">
+                                ${btnLabel}
+                            </button>
+                            <!-- SHARE BUTTON ADDED -->
+                            <button class="btn-share" onclick="${shareAction}">
+                                <svg class="icon-sm" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.innerHTML += html;
+        });
+    }
+
+    function renderPasses() {
+        const container = document.getElementById('passesContainer');
+        
+        // Reverse here too so newest joined passes show up top
+        const myEvents = state.events.filter(e => state.passes.includes(e.id)).reverse();
+        
+        if(myEvents.length === 0) {
+            container.innerHTML = '<div class="empty-state">No active passes.<br>Find an event in the feed.</div>';
+            return;
+        }
+
+        // Build HTML string first
+        let html = '';
+        myEvents.forEach(event => {
+            // Check status in attendee list for this specific user
+            if(!event.attendees) event.attendees = [];
+            
+            const attendeeRecord = event.attendees.find(a => a.name === state.user.name);
+            const isCheckedIn = attendeeRecord && attendeeRecord.status === 'checked-in';
+            
+            const isOnline = event.mode === 'online';
+            const locIcon = isOnline ? '🌐' : '📍';
+
+            // New Simple Wallet Design
+            html += `
+                <div class="pass-card ${isCheckedIn ? 'checked-in' : ''}" onclick="openDetails('${event.id}')">
+                    <div class="pass-top-row">
+                        <div class="pass-date">${formatDate(event.date)} • ${event.time}</div>
+                        <div class="pass-status-pill">${isCheckedIn ? 'CHECKED IN' : 'ACTIVE'}</div>
+                    </div>
+                    <div>
+                        <div class="pass-title">${event.title}</div>
+                        <div class="pass-loc">${locIcon} ${event.location}</div>
+                    </div>
+                    <div class="pass-actions">
+                        <button class="btn-pass-action" onclick="event.stopPropagation(); showUserQR('${event.id}')">
+                            <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                            ${isCheckedIn ? 'SHOW ENTRY PASS' : 'SCAN ENTRY'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+
+    function showUserQR(eventId) {
+        const event = state.events.find(e => e.id === eventId);
+        if(!event) return;
+
+        const modal = document.getElementById('qrDisplayModal');
+        const target = document.getElementById('qrModalTarget');
+        const title = document.getElementById('qrPassTitle');
+        const meta = document.getElementById('qrPassMeta');
+        const userLabel = document.getElementById('qrPassUser');
+        
+        // Manual Code Elements
+        const manualTarget = document.getElementById('manualCodeTarget');
+        const manualText = document.getElementById('manualCodeText');
+        const helpBtn = document.getElementById('qrHelpBtn');
+        
+        // Reset View to Default (Show QR, Hide Manual)
+        target.style.display = 'block';
+        manualTarget.style.display = 'none';
+        helpBtn.textContent = 'Trouble scanning? Show Code';
+        
+        // Robust Clearing for QR
+        target.innerHTML = ''; 
+        title.textContent = event.title;
+        meta.textContent = `${formatDate(event.date)} • ${event.time}`;
+        userLabel.textContent = state.user.name.toUpperCase();
+        
+        // Data payload format: EventID-UserName
+        const payload = `${eventId}-${state.user.name}`;
+        
+        // Generate QR Code safely
+        try {
+            new QRCode(target, {
+                text: payload,
+                width: 180,
+                height: 180,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        } catch(e) {
+            console.error("QR Gen Error", e);
+            target.innerHTML = "Error generating code";
+        }
+        
+        // Generate 6-DIGIT ONLY Manual Code (Randomized for demo, unique per session/user conceptually)
+        // Format: "123 456"
+        const r1 = Math.floor(100 + Math.random() * 900); // 3 digits
+        const r2 = Math.floor(100 + Math.random() * 900); // 3 digits
+        manualText.textContent = `${r1} ${r2}`;
+        
+        modal.classList.add('visible');
+    }
+    
+    // NEW FUNCTION: Toggle between QR and Manual Code
+    function toggleQrManualMode() {
+        const target = document.getElementById('qrModalTarget');
+        const manualTarget = document.getElementById('manualCodeTarget');
+        const helpBtn = document.getElementById('qrHelpBtn');
+        
+        if (target.style.display !== 'none') {
+            // Switch to Manual
+            target.style.display = 'none';
+            manualTarget.style.display = 'block';
+            helpBtn.textContent = 'Show QR Code';
+        } else {
+            // Switch to QR
+            target.style.display = 'block';
+            manualTarget.style.display = 'none';
+            helpBtn.textContent = 'Trouble scanning? Show Code';
+        }
+    }
+
+    function toggleJoin(id) {
+        // Find the event in the master list
+        const eventIndex = state.events.findIndex(e => e.id === id);
+        if (eventIndex === -1) return; 
+
+        const event = state.events[eventIndex];
+        if(!event.attendees) event.attendees = [];
+
+        if(state.passes.includes(id)) {
+            // LEAVE
+            state.passes = state.passes.filter(p => p !== id);
+            // Remove user from attendees list
+            event.attendees = event.attendees.filter(a => a.name !== state.user.name);
+            showToast('Pass removed');
+        } else {
+            // JOIN
+            // Check Capacity
+            const max = event.maxAttendees || Infinity;
+            if (event.attendees.length >= max) {
+                showToast('Event Sold Out');
+                return;
+            }
+
+            state.passes.push(id);
+            // Add user to attendees list
+            event.attendees.push({
+                name: state.user.name,
+                status: 'pending', // 'pending' or 'checked-in'
+                timestamp: Date.now()
+            });
+            showToast('Access granted');
+        }
+        
+        // Update state references
+        state.events[eventIndex] = event; 
+        
+        localStorage.setItem('fida_passes', JSON.stringify(state.passes));
+        saveEvents(); // Persist master list
+        
+        renderFeed();
+        renderPasses();
+    }
+
+    function handleSearch(val) {
+        currentSearchQuery = val;
+        renderFeed();
+    }
+    
+    // --- MODALS & DETAILS ---
+    function openDetails(id) {
+        const event = state.events.find(e => e.id === id);
+        const isJoined = state.passes.includes(id);
+
+        const modal = document.getElementById('detailsModal');
+        const content = document.getElementById('detailsContent');
+        
+        const isOnline = event.mode === 'online';
+        const locIcon = isOnline ? '🌐' : '📍';
+        
+        const count = event.attendees ? event.attendees.length : 0;
+        const max = event.maxAttendees || Infinity;
+        const isSoldOut = count >= max;
+        
+        // Determine Button State for Details View
+        let btnText = isJoined ? 'DROP PASS' : (isSoldOut ? 'SOLD OUT' : `GET PASS • ${event.price === 0 ? 'FREE' : '$'+event.price}`);
+        let btnAction = `toggleJoin('${event.id}'); if(!${isSoldOut} || ${isJoined}) document.getElementById('detailsModal').classList.remove('visible')`;
+        let btnClass = isSoldOut && !isJoined ? 'sold-out' : '';
+
+        // Share Action
+        let shareAction = `shareEvent(event, '${event.id}')`;
+
+        content.innerHTML = `
+            <img src="${event.image}" class="detail-cover">
+            <h2 style="font-size:2rem; font-weight:800; line-height:1; margin-bottom:8px;">${event.title}</h2>
+            <div style="display:flex; gap:12px; margin-bottom:24px;">
+                <span class="t-loc">${locIcon} ${event.location}</span>
+                <span class="t-loc">${formatDate(event.date)} @ ${event.time}</span>
+            </div>
+            
+            <div style="background:var(--bg-card-sub); padding:16px; border-radius:16px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:700; color:var(--text-sec); font-size:0.9rem;">Spots Left</span>
+                <span style="font-weight:700; font-family:var(--font-mono);">${max === Infinity ? 'Unlimited' : (max - count) + ' / ' + max}</span>
+            </div>
+
+            <p style="color:var(--text-sec); line-height:1.6; margin-bottom:32px;">${event.desc}</p>
+            
+            <div style="display:flex; gap:12px;">
+                <button class="btn-main ${btnClass}" onclick="${btnAction}" style="flex:1;">
+                    ${btnText}
+                </button>
+                <button class="btn-main" onclick="${shareAction}" style="width:64px; background:var(--bg-card-sub); color:var(--text-main); box-shadow:none; border:1px solid var(--border-strong);">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                </button>
+            </div>
+        `;
+        
+        modal.classList.add('visible');
+    }
+
+    // --- UTILS ---
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        document.getElementById('toastMsg').textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function formatDate(dateStr) {
+        const options = { month: 'short', day: 'numeric' };
+        return new Date(dateStr).toLocaleDateString('en-US', options);
+    }
+  </script>
+</body>
+</html>
