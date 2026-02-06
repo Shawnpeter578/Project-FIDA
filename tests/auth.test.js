@@ -5,6 +5,8 @@ process.env.DATABASE_URL = 'mongodb://localhost:27017/test';
 process.env.CLOUDINARY_CLOUD_NAME = 'test_cloud';
 process.env.CLOUDINARY_API_KEY = 'test_key';
 process.env.CLOUDINARY_API_SECRET = 'test_secret';
+process.env.RAZOR_KEY = 'test_razor_key';
+process.env.RAZOR_SECRET_KEY = 'test_razor_secret';
 
 const request = require('supertest');
 const { ObjectId } = require('mongodb');
@@ -22,7 +24,7 @@ const mockCollection = (collectionName) => ({
     return null;
   }),
   insertOne: jest.fn(async (doc) => {
-    const newDoc = { ...doc, _id: new ObjectId() };
+    const newDoc = { ...doc, _id: new ObjectId(), joinedEvents: doc.joinedEvents || [] };
     mockDb[collectionName].push(newDoc);
     return { insertedId: newDoc._id };
   }),
