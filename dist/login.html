@@ -484,15 +484,34 @@
 
         async function handleGoogleCredentialResponse(response) {
             try {
-                // We pass the currently selected role to the backend
+                // 1. Map Frontend Role to Backend Role
+                let backendRoleRequest = 'user';
+                if (currentRole === 'host') backendRoleRequest = 'organizer';
+                if (currentRole === 'artist') backendRoleRequest = 'artist';
+
                 const res = await fetch('/api/auth/google', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: response.credential, role: currentRole })
+                    body: JSON.stringify({ token: response.credential, role: backendRoleRequest })
                 });
                 
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Google Auth failed');
+                
+                // 2. Normalize backend role to frontend role for validation
+                let backendRoleResponse = 'user';
+                if (data.user.role === 'organizer') backendRoleResponse = 'host';
+                if (data.user.role === 'artist') backendRoleResponse = 'artist';
+
+                // 3. Strict Role Check
+                if (backendRoleResponse !== currentRole) {
+                    let correctRoleLabel = 'User';
+                    if (backendRoleResponse === 'host') correctRoleLabel = 'Organizer';
+                    if (backendRoleResponse === 'artist') correctRoleLabel = 'Artist';
+
+                    showError(`This email belongs to a ${correctRoleLabel} account. Please switch the tab above.`);
+                    return;
+                }
                 
                 loginUser(data);
             } catch (err) {
