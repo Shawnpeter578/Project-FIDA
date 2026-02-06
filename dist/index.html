@@ -16,6 +16,7 @@
 
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
     <link rel="stylesheet" href="style.css">
 
@@ -352,8 +353,8 @@
                     <label class="form-label">Access & Capacity</label>
                     <div class="grid-2">
                         <div class="inp-group-icon">
-                            <span style="font-weight:700; font-family:var(--font-mono); color:var(--text-muted); font-size: 1.1rem;">$</span>
-                            <input type="number" id="cPrice" class="inp-plain" placeholder="Price">
+                            <span style="font-weight:700; font-family:var(--font-mono); color:var(--text-muted); font-size: 1.1rem;">₹</span>
+                            <input type="number" id="cPrice" class="inp-plain" placeholder="Price (INR)" required min="1">
                         </div>
                         <div class="inp-group-icon">
                             <svg class="icon-sm" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -796,7 +797,7 @@
             const isSoldOut = attendeesCount >= maxAttendees;
             const isOnline = event.mode === 'online';
             const locIcon = isOnline ? '🌐' : '📍';
-            const priceDisplay = (!event.price || event.price === 0) ? 'FREE' : `$${event.price}`;
+            const priceDisplay = (!event.price || event.price === 0) ? 'FREE' : `₹${event.price}`;
             
             let badgeHtml = '';
             if (isSoldOut && !isJoined && !isHost) {
@@ -1068,20 +1069,58 @@
 
     async function joinClub(id) {
         try {
-            const data = await FidaAPI.events.join(id);
+            showToast('Initializing payment...');
+            const orderData = await FidaAPI.events.createOrder(id);
             
-            if(data.success) {
-                joinedEventIds.push(id);
-                showToast('Pass Granted');
-                fetchAndRenderFeed();
-                
-                if(document.getElementById('detailsModal').classList.contains('visible')) {
-                    openDetail(id);
-                }
-            } else {
-                showToast(data.error || 'Join Failed');
+            if (!orderData.success) {
+                showToast(orderData.error || 'Order creation failed');
+                return;
             }
+
+            const options = {
+                key: orderData.key,
+                amount: orderData.amount,
+                currency: "INR",
+                name: "GigByCity",
+                description: `Entry for ${orderData.eventTitle}`,
+                order_id: orderData.orderId,
+                handler: async function (response) {
+                    showToast('Verifying payment...');
+                    const verifyRes = await FidaAPI.events.verifyPayment({
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature,
+                        eventId: id
+                    });
+
+                    if (verifyRes.success) {
+                        joinedEventIds.push(id);
+                        showToast('Pass Granted! Check My Passes.');
+                        fetchAndRenderFeed();
+                        if(document.getElementById('detailsModal').classList.contains('visible')) {
+                            openDetail(id);
+                        }
+                    } else {
+                        showToast(verifyRes.error || 'Verification Failed');
+                    }
+                },
+                prefill: {
+                    name: orderData.userName,
+                    email: currentUser.email,
+                },
+                theme: {
+                    color: "#000000"
+                }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response) {
+                showToast('Payment Failed: ' + response.error.description);
+            });
+            rzp.open();
+
         } catch(err) {
+            console.error(err);
             showToast('Network Error');
         }
     }
@@ -1097,7 +1136,7 @@
         const count = event.attendees ? event.attendees.length : 0;
         const max = event.maxAttendees || Infinity;
         const isSoldOut = count >= max;
-        const priceDisplay = (!event.price) ? 'FREE' : `$${event.price}`;
+        const priceDisplay = (!event.price) ? 'FREE' : `₹${event.price}`;
         const hostName = (!event.creatorName) ? 'Unknown' : event.creatorName;
 
         content.innerHTML = `

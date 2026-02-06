@@ -67,6 +67,24 @@ FidaAPI = {
                 body: JSON.stringify({ eventId })
             });
             return await res.json();
+        },
+
+        async createOrder(eventId) {
+            const res = await fetch(`${FidaAPI.BASE_URL}/events/create-order`, {
+                method: 'POST',
+                headers: FidaAPI.getHeaders(),
+                body: JSON.stringify({ eventId })
+            });
+            return await res.json();
+        },
+
+        async verifyPayment(paymentData) {
+            const res = await fetch(`${FidaAPI.BASE_URL}/events/verify-payment`, {
+                method: 'POST',
+                headers: FidaAPI.getHeaders(),
+                body: JSON.stringify(paymentData)
+            });
+            return await res.json();
         }
     },
 

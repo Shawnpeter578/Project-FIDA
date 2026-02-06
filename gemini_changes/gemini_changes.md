@@ -41,3 +41,12 @@
 ## Test Updates (`tests/app.test.js`)
 *   **Environment Mocks:** Added mock environment variables to the test setup to satisfy the new strict configuration checks.
 *   **Pagination Mocks:** Updated the MongoDB mock to support chained `.skip()` and `.limit()` calls used by the new pagination logic.
+
+## Financial Integration (2026-02-06)
+
+### 1. Razorpay Integration (`src/event_path.js`, `dist/index.html`, `dist/script.js`)
+*   **Paid Event Enforcement:** Implemented real money transactions (INR) for all event registrations.
+*   **Backend Order Flow:** Added `POST /api/events/create-order` and `POST /api/events/verify-payment` endpoints.
+*   **Frontend Payment Flow:** Integrated Razorpay Checkout script and updated `joinClub` to handle the payment-verification lifecycle.
+*   **Currency Standardization:** Transitioned UI from $ to ₹ (INR) and enforced a minimum price of 1 INR for all new events.
+
