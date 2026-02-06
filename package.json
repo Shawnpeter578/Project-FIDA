@@ -1,7 +1,7 @@
 {
   "name": "clubapp",
   "version": "1.0.0",
-  "packageManager": "pnpm@8.15.0",
+  "packageManager": "pnpm@10.28.2",
   "description": "This is for club connectivity",
   "main": "server.js",
   "scripts": {
@@ -20,7 +20,8 @@
     "google-auth-library": "^10.5.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^7.0.0",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "razorpay": "^2.9.6"
   },
   "devDependencies": {
     "jest": "^30.2.0",

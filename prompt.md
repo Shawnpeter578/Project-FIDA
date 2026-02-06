@@ -1,28 +1,34 @@
-# Current Task: Update ClubApp Mini to New Backend Regime
+# Task: Razorpay Integration for Paid Event Registrations
 
-The "mini" application currently relies on an external, possibly outdated backend and lacks support for the recent architectural changes (Pagination, Profile Editing). The goal is to align its frontend client (`script.js`) and UI (`index.html`) with the local `GigByCity` backend.
+Integrate Razorpay into the GigByCity platform to handle payments for event registrations. Every event registration now requires a transaction in INR.
 
-## Course of Action
+## Phase 1: Preparation & Environment
+1.  **Dependency:** Install `razorpay` npm package.
+2.  **Configuration:** Update `.env` with `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`.
+3.  **Config Module:** Update `src/config/config.js` to include Razorpay credentials.
 
-### 1. Refactor API Client (`clubapp-mini/dist/script.js`)
--   **Target Local Backend:** Change `BASE_URL` from the Koyeb deployment to `http://localhost:3000/api`.
--   **Implement Pagination:** Update `FidaAPI.events.getAll` to accept `page` and `limit` parameters, reflecting the new `GET /events` signature.
--   **Enable Profile Management:**
-    -   Replace the mocked `FidaAPI.profile.loadDetails` with a real `GET /auth/me` call.
-    -   Add `FidaAPI.profile.update` to interface with the new `PUT /auth/me` endpoint.
+## Phase 2: Backend Implementation
+1.  **Refactor Join Logic:** Extract the attendee registration logic from `POST /api/events/join` into a reusable internal function.
+2.  **Payment Initiation Route:** Create `POST /api/events/create-order`
+    *   Verify event existence and capacity.
+    *   Enforce a minimum price (since "every event now needs real money").
+    *   Initialize a Razorpay Order via the SDK.
+    *   Return order details (ID, amount, currency) to the frontend.
+3.  **Payment Verification Route:** Create `POST /api/events/verify-payment`
+    *   Cryptographically verify the Razorpay signature.
+    *   On success, register the user for the event using the refactored logic.
+    *   Update the attendee record with payment metadata (optional).
+4.  **Enforcement:** Update `POST /api/events/` (event creation) to ensure `price` is mandatory and greater than zero.
 
-### 2. Update UI Logic (`clubapp-mini/dist/index.html`)
--   **Lazy Loading:**
-    -   Modify `fetchAndRenderFeed` to support appending data (infinite scroll or "Load More" pattern).
-    -   Add a "Load More" button to the event feed that triggers the next page fetch.
--   **Profile Wiring:**
-    -   Update `saveProfile` to call `FidaAPI.profile.update` instead of just showing a toast.
-    -   Ensure profile data loading (`loadProfileData`) correctly maps the response fields from `GET /auth/me`.
--   **Cleanup:** Remove legacy hacks (like duplicate `mode` fields in Event Create) and ensure form submissions align with the expected `multipart/form-data` structure where applicable.
+## Phase 3: Frontend Implementation
+1.  **Checkout Integration:** Add the Razorpay Checkout script to `dist/index.html`.
+2.  **API Wrapper Updates:** Add `createOrder` and `verifyPayment` methods to the `FidaAPI` in `dist/script.js`.
+3.  **Payment Flow Logic:**
+    *   Update `joinClub(id)` in `dist/index.html` to first call `createOrder`.
+    *   Launch the Razorpay UI using the order details.
+    *   On successful payment, call `verifyPayment` and refresh the user's passes.
+    *   Add error handling for payment failures or cancellations.
 
-## Verification Plan
--   **Manual Test:** Serve the mini app (using its simple server) and verify:
-    -   Login works against the local DB.
-    -   Feed loads the first 20 events.
-    -   "Load More" fetches the next batch.
-    -   Profile updates persist to the local MongoDB.
+## Phase 4: Verification & Testing
+1.  **Integration Test:** Write tests in `tests/payment.test.js` to verify the payment verification logic (mocking Razorpay SDK).
+2.  **Manual Verification:** Test the complete flow in a local environment using Razorpay's Test Mode credentials.
