@@ -38,6 +38,9 @@
 ### 1. "Infinity" Logic (`src/event_path.js`)
 *   **Robust Parsing:** Fixed the brittle handling of "Infinity" for `maxAttendees`. It now correctly parses numbers and provides a safe fallback for invalid inputs.
 
+### 2. Google Sign-In Fix (`src/app.js`)
+*   **Resolved Popup Hang:** Updated `helmet` configuration to allow cross-origin popups by setting `crossOriginOpenerPolicy` to `same-origin-allow-popups`. This fixed the issue where Google Sign-In would hang on a white screen.
+
 ## Test Updates (`tests/app.test.js`)
 *   **Environment Mocks:** Added mock environment variables to the test setup to satisfy the new strict configuration checks.
 *   **Pagination Mocks:** Updated the MongoDB mock to support chained `.skip()` and `.limit()` calls used by the new pagination logic.

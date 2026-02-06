@@ -14,6 +14,9 @@ const app = express();
 // Security Headers
 app.use(helmet({
   contentSecurityPolicy: false, // Set to false if using external scripts like Razorpay/Unsplash
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  crossOriginEmbedderPolicy: false,
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" }
 }));
 
 // Rate Limiting
