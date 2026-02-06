@@ -1,7 +1,9 @@
 const { JWT_SECRET } = require('../config/config.js');
 const jwt = require('jsonwebtoken');
+const { ObjectId } = require('mongodb');
+const { getUsersCollection } = require('../database/mongodb');
 
-const authenticateJWT = (req, res, next) => {
+const authenticateJWT = async (req, res, next) => {
     // 1. Check for Authorization header
     const authHeader = req.headers['authorization'];
     
@@ -14,12 +16,20 @@ const authenticateJWT = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
+        
+        // Optional but recommended: Verify user still exists
+        const usersCollection = getUsersCollection();
+        const user = await usersCollection.findOne({ _id: new ObjectId(decoded.userId) });
+        if (!user) {
+            return res.status(401).json({ error: "Unauthorized: User no longer exists" });
+        }
+
         req.userId = decoded.userId; 
         req.userName = decoded.name; 
         req.userRole = decoded.role || 'user'; // Default to 'user'
         next();
     } catch (e) {
-        return res.status(403).json({ error: "Forbidden: Invalid token" });
+        return res.status(403).json({ error: "Forbidden: Invalid or expired token" });
     }
 };
 
