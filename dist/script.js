@@ -528,5 +528,100 @@ function createModal(id) {
     m.addEventListener('click', e => { if(e.target === m) m.classList.remove('visible'); });
 
     return m;
-
 }
+
+/* --- RESTORED UTILS --- */
+
+function switchView(viewName, btnEl) {
+    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.dock-item').forEach(el => el.classList.remove('active'));
+
+    const target = document.getElementById('view' + viewName.charAt(0).toUpperCase() + viewName.slice(1));
+    if (target) target.classList.add('active');
+    
+    if (btnEl) btnEl.classList.add('active');
+    
+    if (viewName === 'home') fetchAndRenderFeed(false);
+    if (viewName === 'passes') renderPasses();
+    if (viewName === 'host') renderHostDashboard();
+}
+
+function handleSearch(val) {
+    currentSearch = val.toLowerCase();
+    renderFeed();
+}
+
+function openFilterModal() {
+    const m = document.getElementById('filterModal');
+    if(m) m.classList.add('visible');
+    else showToast("Filter unavailable");
+}
+
+function closeCreateModal() {
+    const m = document.getElementById('createModal');
+    if(m) m.classList.remove('visible');
+}
+
+function showToast(msg, type='info') {
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.innerText = msg;
+    document.body.appendChild(t);
+    
+    // Inline styles for reliability
+    Object.assign(t.style, {
+        position: 'fixed', bottom: '100px', left: '50%', transform: 'translateX(-50%)',
+        background: 'rgba(0,0,0,0.85)', color: '#fff', padding: '12px 24px',
+        borderRadius: '30px', zIndex: '9999', opacity: '0', transition: 'opacity 0.3s',
+        fontFamily: 'var(--font-main, sans-serif)', fontSize: '0.9rem'
+    });
+    
+    requestAnimationFrame(() => t.style.opacity = '1');
+    setTimeout(() => {
+        t.style.opacity = '0';
+        setTimeout(() => t.remove(), 300);
+    }, 3000);
+}
+
+async function saveProfile(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    const originalText = btn.innerText;
+    btn.innerText = 'Saving...';
+
+    const data = {
+        name: document.getElementById('pName').value,
+        phone: document.getElementById('pPhone').value,
+        city: document.getElementById('pCity').value
+    };
+
+    try {
+        const res = await FidaAPI.profile.update(data);
+        if(res.success) {
+            currentUser = res.user;
+            localStorage.setItem('fida_user', JSON.stringify(currentUser));
+            updateUserUI();
+            showToast('Profile Updated');
+        } else {
+            showToast(res.error || 'Update failed');
+        }
+    } catch(err) {
+        showToast('Network Error');
+    }
+    btn.innerText = originalText;
+}
+
+function formatDate(dStr) {
+    if(!dStr) return '';
+    const options = { month: 'short', day: 'numeric' };
+    return new Date(dStr).toLocaleDateString('en-US', options);
+}
+
+// Global Expose
+window.switchView = switchView;
+window.handleSearch = handleSearch;
+window.saveProfile = saveProfile;
+window.showToast = showToast;
+window.closeCreateModal = closeCreateModal;
+window.openFilterModal = openFilterModal;
+window.formatDate = formatDate;
