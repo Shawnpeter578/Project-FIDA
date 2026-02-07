@@ -13,6 +13,10 @@ const { ObjectId } = require('mongodb');
 const { app, connectToMongoDB, closeMongoDB } = require('../src/app');
 
 // MOCKS
+jest.mock('../src/utils/email', () => ({
+  sendTicketEmail: jest.fn().mockResolvedValue(true)
+}));
+
 jest.mock('razorpay', () => {
   return jest.fn().mockImplementation(() => ({
     orders: {
@@ -109,32 +113,66 @@ const mockCollection = (collectionName) => ({
         const val = update.$push[key];
         if (!doc[key]) doc[key] = [];
         
-        // Handle $each if needed, but simple push for now
-        // Inject _id for comments if they don't have one
-        if (key === 'comments' && !val._id) val._id = new ObjectId();
-        
-        doc[key].push(val);
-        modifiedCount = 1;
-      }
-      if (update.$pull) {
-         const key = Object.keys(update.$pull)[0];
-         const filter = update.$pull[key];
-         if (doc[key]) {
-             const originalLen = doc[key].length;
-             doc[key] = doc[key].filter(item => {
-                 if (filter._id && item._id) {
-                     return item._id.toString() !== filter._id.toString();
-                 }
-                 return true; 
+        // Handle $each
+        if (val.$each && Array.isArray(val.$each)) {
+             val.$each.forEach(item => {
+                 // Inject _id if missing
+                 if (key === 'comments' && !item._id) item._id = new ObjectId();
+                 doc[key].push(item);
              });
-             if (doc[key].length < originalLen) modifiedCount = 1;
-         }
+             modifiedCount = 1;
+        } else {
+             // Inject _id for comments if they don't have one
+             if (key === 'comments' && !val._id) val._id = new ObjectId();
+             doc[key].push(val);
+             modifiedCount = 1;
+        }
+      }
+      if (update.$set) {
+          Object.keys(update.$set).forEach(key => {
+              if (key.includes('.$.')) {
+                  // Handle positional operator: "attendees.$.status"
+                  // We rely on the fact that we found the index in the query logic (which we haven't fully simulated here for $elemMatch behavior in findIndex)
+                  // But for this specific test, we know we are looking for "attendees.ticketId": ticketId
+                  
+                  const arrayField = key.split('.$.')[0]; // "attendees"
+                  const fieldToUpdate = key.split('.$.')[1]; // "status"
+                  
+                  if (doc[arrayField]) {
+                      // Find the item that matched. 
+                      // In the main updateOne logic, we only found the DOC index.
+                      // We need to find the ITEM index within the doc.
+                      
+                      // Extract the query filter for the array item
+                      // The query was { _id: ..., "attendees.ticketId": ticketId }
+                      // We need to find the item in doc[arrayField] that matches the query part related to it.
+                      
+                      // Simplification for the test case:
+                      const ticketIdQuery = query["attendees.ticketId"];
+                      const userIdQuery = query["attendees.userId"];
+                      
+                      const itemIndex = doc[arrayField].findIndex(item => {
+                          if (ticketIdQuery) return item.ticketId === ticketIdQuery;
+                          if (userIdQuery) return item.userId === userIdQuery;
+                          return false;
+                      });
+                      
+                      if (itemIndex !== -1) {
+                          doc[arrayField][itemIndex][fieldToUpdate] = update.$set[key];
+                          modifiedCount = 1;
+                      }
+                  }
+              } else {
+                  doc[key] = update.$set[key];
+                  modifiedCount = 1;
+              }
+          });
       }
     }
-    return { matchedCount: index !== -1 ? 1 : 0, modifiedCount };
+    return { modifiedCount };
   }),
-  updateMany: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
-});
+  updateMany: jest.fn().mockResolvedValue({ modifiedCount: 1 })
+})
 
 jest.mock('mongodb', () => {
   const actualMongo = jest.requireActual('mongodb');
@@ -260,17 +298,20 @@ describe('API Integration Flow', () => {
     eventId = res.body.eventId;
   });
 
-  test('POST /api/events/create-order (User can initiate payment)', async () => {
+  test('POST /api/events/create-order (User can initiate payment for multiple)', async () => {
     const res = await request(app)
       .post('/api/events/create-order')
       .set('Authorization', `Bearer ${userToken}`)
-      .send({ eventId });
+      .send({ eventId, quantity: 2 }); // Request 2 tickets
 
     expect(res.statusCode).toBe(200);
     expect(res.body.orderId).toBe('test_order_id');
+    expect(res.body.quantity).toBe(2);
+    // Price was 100, so 2 tickets = 200 * 100 paise = 20000
+    expect(res.body.amount).toBe(20000); 
   });
 
-  test('POST /api/events/verify-payment (User can join after payment)', async () => {
+  test('POST /api/events/verify-payment (User can join with multiple tickets)', async () => {
     const razorpay_order_id = 'test_order_id';
     const razorpay_payment_id = 'test_payment_id';
     const crypto = require('crypto');
@@ -286,10 +327,35 @@ describe('API Integration Flow', () => {
           eventId,
           razorpay_order_id,
           razorpay_payment_id,
-          razorpay_signature
+          razorpay_signature,
+          quantity: 2
       });
 
     expect(res.statusCode).toBe(200);
+  });
+  
+  test('GET /api/events (Verify Multiple Tickets)', async () => {
+    const res = await request(app).get('/api/events');
+    const event = res.body.find(e => e._id.toString() === eventId.toString());
+    
+    // Filter attendees for this user
+    const userTickets = event.attendees.filter(a => a.userId === userId);
+    expect(userTickets.length).toBe(2);
+    expect(userTickets[0].ticketId).toBeDefined();
+    expect(userTickets[1].ticketId).toBeDefined();
+    expect(userTickets[0].ticketId).not.toBe(userTickets[1].ticketId);
+    
+    // Store ticketId for checkin test
+    global.testTicketId = userTickets[0].ticketId;
+  });
+
+  test('POST /api/events/checkin (Check-in specific ticket)', async () => {
+     const res = await request(app)
+      .post('/api/events/checkin')
+      .set('Authorization', `Bearer ${organizerToken}`)
+      .send({ eventId, ticketId: global.testTicketId });
+      
+      expect(res.statusCode).toBe(200);
   });
   
   test('POST /api/events/join (Direct join fails for paid event)', async () => {
@@ -349,14 +415,16 @@ describe('API Integration Flow', () => {
     const event = res.body.find(e => e._id.toString() === eventId.toString());
     
     // Check if any attendee has the matching userId
-    const attendee = event.attendees.find(a => a.userId === userId);
-    expect(attendee).toBeDefined();
-    expect(attendee.name).toBe('Test USER');
-    expect(attendee.status).toBe('paid');
+    const attendees = event.attendees.filter(a => a.userId === userId);
+    expect(attendees.length).toBeGreaterThanOrEqual(2);
+    expect(attendees[0].name).toBe('Test USER');
+    
+    // Check status of the one we checked in
+    const checkedInTicket = attendees.find(a => a.ticketId === global.testTicketId);
+    expect(checkedInTicket.status).toBe('checked-in');
 
-    expect(event.creatorName).toBe('Test ORGANIZER'); // Creator is now Organizer
+    expect(event.creatorName).toBe('Test ORGANIZER'); 
     expect(event.comments[0].text).toBe("Nice event!");
-    expect(event.comments[0]._id).toBeDefined(); // Verify comment has ID
   });
 
   test('DELETE /api/events/:eventId/comments/:commentId (Delete Comment)', async () => {

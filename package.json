@@ -24,6 +24,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^7.0.0",
     "multer": "^2.0.2",
+    "nodemailer": "^8.0.1",
+    "qrcode": "^1.5.4",
     "razorpay": "^2.9.6"
   },
   "devDependencies": {

@@ -169,7 +169,7 @@
             top: 5px; left: 5px;
             height: calc(100% - 10px);
             /* width is calculated in JS */
-            width: calc(33.33% - 7px); 
+            width: calc(50% - 7px); 
             background: var(--primary);
             border-radius: 12px;
             transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
@@ -321,7 +321,6 @@
                 <div class="role-highlighter" id="roleHighlighter"></div>
                 <button class="role-btn active" onclick="setRole('user')">Fan</button>
                 <button class="role-btn" onclick="setRole('host')">Organizer</button>
-                <button class="role-btn" onclick="setRole('artist')">Artist</button>
             </div>
 
             <!-- Auth Mode Toggle (Login vs Signup) -->
@@ -403,18 +402,13 @@
                 btns[0].classList.add('active');
                 quote.innerHTML = "Discover the heartbeat<br>of your city.";
             } else if (role === 'host') {
-                highlighter.style.transform = 'translateX(100%)'; // Move to middle (roughly)
-                // Adjustment for 3 items: 100% of one item width is the shift
+                highlighter.style.transform = 'translateX(100%)'; 
                 btns[1].classList.add('active');
                 quote.innerHTML = "Create events that<br>everyone remembers.";
-            } else if (role === 'artist') {
-                highlighter.style.transform = 'translateX(200%)'; // Move to end
-                btns[2].classList.add('active');
-                quote.innerHTML = "Your stage is waiting.<br>Amplify your sound.";
             }
 
             // 2. Update button text to reflect role context
-            const roleName = role === 'host' ? 'Organizer' : (role === 'artist' ? 'Artist' : 'User');
+            const roleName = role === 'host' ? 'Organizer' : 'User';
             document.getElementById('loginBtn').innerText = `Sign In as ${roleName}`;
             document.getElementById('signupBtn').innerText = `Join as ${roleName}`;
             
@@ -508,10 +502,9 @@
 
             try {
                 // Map frontend roles to backend expectations
-                // Assuming backend knows 'organizer', 'user', and potentially 'artist'
+                // Assuming backend knows 'organizer', 'user'
                 let backendRole = 'user';
                 if (currentRole === 'host') backendRole = 'organizer';
-                if (currentRole === 'artist') backendRole = 'artist'; // Added Artist support
 
                 const res = await fetch('/api/auth/signup', {
                     method: 'POST',
@@ -546,13 +539,11 @@
                 // Normalize backend role to frontend role for comparison
                 let backendRole = 'user';
                 if (data.user.role === 'organizer') backendRole = 'host';
-                if (data.user.role === 'artist') backendRole = 'artist';
                 
                 // Strict Role Check
                 if (backendRole !== currentRole) {
                     let correctRoleLabel = 'User';
                     if (backendRole === 'host') correctRoleLabel = 'Organizer';
-                    if (backendRole === 'artist') correctRoleLabel = 'Artist';
 
                     showError(`This email belongs to a ${correctRoleLabel} account. Please switch the tab above.`);
                     return;
@@ -573,8 +564,6 @@
         function redirectUser(role) {
             if(role === 'host') {
                 window.location.href = '/organizer.html';
-            } else if (role === 'artist') {
-                window.location.href = '/artist-dashboard.html'; // Suggested path for artists
             } else {
                 window.location.href = '/index.html'; 
             }

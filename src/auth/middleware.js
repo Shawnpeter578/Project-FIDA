@@ -27,6 +27,7 @@ const authenticateJWT = async (req, res, next) => {
         req.userId = decoded.userId; 
         req.userName = decoded.name; 
         req.userRole = decoded.role || 'user'; // Default to 'user'
+        req.userEmail = user.email; // Attached for notifications
         next();
     } catch (e) {
         return res.status(403).json({ error: "Forbidden: Invalid or expired token" });

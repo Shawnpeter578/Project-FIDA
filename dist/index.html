@@ -460,6 +460,8 @@
     let html5QrcodeScanner = null;
     let currentSearch = '';
     let currentFilter = 'ALL';
+    let currentQuantity = 1; // New
+    let currentEventPrice = 0; // New
     
     // Carousel Vars
     let currentSlide = 0;
@@ -490,6 +492,18 @@
         
         checkAuth();
     });
+
+    // Helper to update Quantity UI
+    function updateQuantity(change) {
+        let newQty = currentQuantity + change;
+        if (newQty < 1) newQty = 1;
+        if (newQty > 10) newQty = 10;
+        currentQuantity = newQty;
+        
+        document.getElementById('qtyCount').innerText = currentQuantity;
+        const total = currentQuantity * currentEventPrice;
+        document.getElementById('qtyTotal').innerText = total > 0 ? `₹${total}` : 'FREE';
+    }
 
     // --- AUTHENTICATION FLOW ---
 
@@ -806,7 +820,7 @@
 
             // Determine Button State
             let btnLabel = isJoined ? 'GOT PASS' : (isSoldOut ? 'FULL' : 'GET PASS');
-            let btnAction = `event.stopPropagation(); ${isJoined ? `openDetail('${id}')` : `joinClub('${id}')`}`;
+            let btnAction = `event.stopPropagation(); ${isJoined ? `openDetail('${id}')` : `openDetail('${id}')`}`;
             let btnClass = isSoldOut && !isJoined ? 'sold-out' : '';
 
             if (isHost) {
@@ -892,17 +906,15 @@
             const isOnline = event.mode === 'online';
             const locIcon = isOnline ? '🌐' : '📍';
             
-            // Check if user is checked in
-            // Note: The attendee object structure depends on API response.
-            // Assuming event.attendees is array of IDs or Objects.
-            // Simplified check logic:
-            const isCheckedIn = false; // Placeholder as API doesn't return detailed attendee status in 'getAll' usually
+            // Get all tickets for this user
+            const myTickets = event.attendees ? event.attendees.filter(a => a.userId === currentUser._id) : [];
+            const ticketCount = myTickets.length;
 
             const html = `
-                <div class="pass-card ${isCheckedIn ? 'checked-in' : ''}" onclick="openDetail('${id}')">
+                <div class="pass-card" onclick="openDetail('${id}')">
                     <div class="pass-top-row">
                         <div class="pass-date">${formatDate(event.date)} • ${event.time}</div>
-                        <div class="pass-status-pill">${isCheckedIn ? 'CHECKED IN' : 'ACTIVE'}</div>
+                        <div class="pass-status-pill">${ticketCount} TICKET${ticketCount !== 1 ? 'S' : ''}</div>
                     </div>
                     <div>
                         <div class="pass-title">${event.title}</div>
@@ -911,7 +923,7 @@
                     <div class="pass-actions">
                         <button class="btn-pass-action" onclick="event.stopPropagation(); showUserQR('${id}', '${event.title.replace(/'/g, "\\'")}')">
                             <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                            ${isCheckedIn ? 'SHOW ENTRY PASS' : 'SCAN ENTRY'}
+                            VIEW TICKETS
                         </button>
                     </div>
                 </div>
@@ -1070,7 +1082,7 @@
     async function joinClub(id) {
         try {
             showToast('Initializing payment...');
-            const orderData = await FidaAPI.events.createOrder(id);
+            const orderData = await FidaAPI.events.createOrder(id, currentQuantity); // Updated to pass Qty
             
             if (!orderData.success) {
                 showToast(orderData.error || 'Order creation failed');
@@ -1082,7 +1094,7 @@
                 amount: orderData.amount,
                 currency: "INR",
                 name: "GigByCity",
-                description: `Entry for ${orderData.eventTitle}`,
+                description: `Entry for ${orderData.eventTitle} (x${currentQuantity})`,
                 order_id: orderData.orderId,
                 handler: async function (response) {
                     showToast('Verifying payment...');
@@ -1090,7 +1102,8 @@
                         razorpay_order_id: response.razorpay_order_id,
                         razorpay_payment_id: response.razorpay_payment_id,
                         razorpay_signature: response.razorpay_signature,
-                        eventId: id
+                        eventId: id,
+                        quantity: currentQuantity // <--- Passed to verification
                     });
 
                     if (verifyRes.success) {
@@ -1129,6 +1142,10 @@
         const event = currentEvents.find(e => (e._id || e.id) === id);
         if(!event) return;
         
+        // Reset State
+        currentQuantity = 1;
+        currentEventPrice = event.price || 0;
+
         const isJoined = joinedEventIds.includes(id);
         const modal = document.getElementById('detailsModal');
         const content = document.getElementById('detailsContent');
@@ -1138,6 +1155,21 @@
         const isSoldOut = count >= max;
         const priceDisplay = (!event.price) ? 'FREE' : `₹${event.price}`;
         const hostName = (!event.creatorName) ? 'Unknown' : event.creatorName;
+
+        let qtySelectorHtml = '';
+        if(!isJoined && !isSoldOut) {
+             qtySelectorHtml = `
+                 <div class="quantity-control" style="background:var(--bg-body); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:700;">Tickets</span>
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <button onclick="updateQuantity(-1)" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--border); background:white;">-</button>
+                        <span id="qtyCount" style="font-weight:700; width:20px; text-align:center;">1</span>
+                        <button onclick="updateQuantity(1)" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--border); background:white;">+</button>
+                    </div>
+                    <span id="qtyTotal" style="font-weight:800; min-width:60px; text-align:right;">${priceDisplay}</span>
+                 </div>
+             `;
+        }
 
         content.innerHTML = `
             <img src="${event.image || ''}" class="detail-cover" style="${!event.image ? 'display:none' : ''}">
@@ -1154,8 +1186,11 @@
             </div>
 
             <p style="color:var(--text-sec); line-height:1.6; margin-bottom:32px;">${event.description || 'No description.'}</p>
+            
+            ${qtySelectorHtml}
+
             <button class="btn-main ${isSoldOut && !isJoined ? 'sold-out' : ''}" onclick="${isJoined ? '' : `joinClub('${id}')`}">
-                ${isJoined ? 'ALREADY JOINED' : (isSoldOut ? 'SOLD OUT' : `GET PASS • ${priceDisplay}`)}
+                ${isJoined ? 'ALREADY JOINED' : (isSoldOut ? 'SOLD OUT' : `GET PASS`)}
             </button>
         `;
         
@@ -1198,24 +1233,47 @@
         const userLabel = document.getElementById('qrPassUser');
         
         const event = currentEvents.find(e => (e._id || e.id) === eventId);
+        // Get all tickets for this user
+        const myTickets = event.attendees ? event.attendees.filter(a => a.userId === currentUser._id) : [];
 
         target.innerHTML = ''; 
         title.textContent = eventTitle;
         if(event) {
             meta.textContent = `${formatDate(event.date)} • ${event.time}`;
         }
-        userLabel.textContent = currentUser ? currentUser.name.toUpperCase() : 'USER';
         
-        const payload = `${eventId}-${currentUser._id}`;
-        
-        new QRCode(target, {
-            text: payload,
-            width: 180,
-            height: 180,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
-        });
+        // Render Multiple QRs
+        if (myTickets.length > 0) {
+            let html = '<div style="display:flex; flex-wrap:wrap; gap:20px; justify-content:center; max-height:400px; overflow-y:auto;">';
+            myTickets.forEach((ticket, i) => {
+                html += `<div id="qr-c-${i}" style="text-align:center; padding:10px; border:1px dashed #ccc; border-radius:8px;">
+                            <div style="margin-bottom:5px; font-weight:700; font-size:0.8rem;">Ticket #${i+1}</div>
+                            <div id="qr-${i}"></div>
+                            <div style="font-size:0.6rem; color:grey; margin-top:5px;">${ticket.status.toUpperCase()}</div>
+                         </div>`;
+            });
+            html += '</div>';
+            target.innerHTML = html;
+
+            // Generate QRs
+            setTimeout(() => {
+                myTickets.forEach((ticket, i) => {
+                     const payload = `${eventId}-${ticket.ticketId}`; // Use ticketId
+                     new QRCode(document.getElementById(`qr-${i}`), {
+                        text: payload,
+                        width: 120,
+                        height: 120,
+                        colorDark : ticket.status === 'checked-in' ? "#888888" : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.L
+                    });
+                });
+            }, 100);
+            
+            userLabel.textContent = `${myTickets.length} TICKETS`;
+        } else {
+             target.innerHTML = 'No tickets found.';
+        }
         
         modal.classList.add('visible');
     }
@@ -1257,7 +1315,7 @@
         }
         
         const eventId = decodedText.substring(0, splitIndex);
-        const userId = decodedText.substring(splitIndex + 1);
+        const ticketId = decodedText.substring(splitIndex + 1); // Now ticketId
         
         try {
             const token = localStorage.getItem('fida_token');
@@ -1267,7 +1325,7 @@
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ eventId, userId })
+                body: JSON.stringify({ eventId, ticketId }) // Send ticketId
             });
             const data = await res.json();
             

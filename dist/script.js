@@ -69,11 +69,11 @@ FidaAPI = {
             return await res.json();
         },
 
-        async createOrder(eventId) {
+        async createOrder(eventId, quantity = 1) {
             const res = await fetch(`${FidaAPI.BASE_URL}/events/create-order`, {
                 method: 'POST',
                 headers: FidaAPI.getHeaders(),
-                body: JSON.stringify({ eventId })
+                body: JSON.stringify({ eventId, quantity })
             });
             return await res.json();
         },

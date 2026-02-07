@@ -9,6 +9,7 @@ const multer = require('multer');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const { razor_key, razor_secret_key } = require('./config/config');
+const { sendTicketEmail } = require('./utils/email');
 
 const razorpay = new Razorpay({
     key_id: razor_key,
@@ -104,10 +105,10 @@ router.post('/', authenticateJWT, upload.single('image'), async (req, res) => {
 router.post('/checkin', authenticateJWT, async (req, res) => {
     try {
         const eventsCollection = getEventsCollection();
-        const { eventId, userId } = req.body;
+        const { eventId, ticketId } = req.body; // Changed to ticketId
         
-        if (!eventId || !userId) {
-            return res.status(400).json({ error: "Missing eventId or userId" });
+        if (!eventId || !ticketId) {
+            return res.status(400).json({ error: "Missing eventId or ticketId" });
         }
 
         const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) });
@@ -119,12 +120,12 @@ router.post('/checkin', authenticateJWT, async (req, res) => {
         }
 
         const result = await eventsCollection.updateOne(
-            { _id: new ObjectId(eventId), "attendees.userId": userId },
+            { _id: new ObjectId(eventId), "attendees.ticketId": ticketId },
             { $set: { "attendees.$.status": "checked-in" } }
         );
 
         if (result.matchedCount === 0) {
-            return res.status(404).json({ error: "Guest not found in list" });
+            return res.status(404).json({ error: "Ticket not found" });
         }
 
         res.status(200).json({ success: true, message: "Check-in successful" });
@@ -139,24 +140,25 @@ router.post('/create-order', authenticateJWT, async (req, res) => {
         if (req.userRole !== 'user') return res.status(403).json({ error: "Only users can join events" });
 
         const { eventId } = req.body;
+        const quantity = parseInt(req.body.quantity) || 1;
+
         if (!eventId) return res.status(400).json({ error: "Missing Event ID" });
+        if (quantity < 1 || quantity > 10) return res.status(400).json({ error: "Invalid quantity (1-10)" });
 
         const eventsCollection = getEventsCollection();
         const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) });
 
         if (!event) return res.status(404).json({ error: "Event not found" });
 
-        // Check if already joined
-        const alreadyJoined = event.attendees.some(a => a.userId === req.userId);
-        if (alreadyJoined) return res.status(400).json({ error: "Already joined" });
-
-        // Check capacity
-        if (event.attendees.length >= event.maxAttendees) {
-            return res.status(400).json({ error: "Event is full" });
+        // Check if already joined (Optional: We allow buying more, but maybe limit total per user?)
+        // For now, removing "Already joined" check to allow multi-buy. 
+        // Logic: Check capacity
+        if (event.attendees.length + quantity > event.maxAttendees) {
+            return res.status(400).json({ error: "Not enough tickets remaining" });
         }
 
         const options = {
-            amount: Math.round(event.price * 100), // amount in paise
+            amount: Math.round(event.price * 100 * quantity), // amount in paise * qty
             currency: "INR",
             receipt: `rcpt_${Date.now()}`,
         };
@@ -165,7 +167,8 @@ router.post('/create-order', authenticateJWT, async (req, res) => {
         res.status(200).json({ 
             success: true, 
             orderId: order.id, 
-            amount: options.amount, 
+            amount: options.amount,
+            quantity: quantity, // Return to frontend
             key: razor_key,
             eventTitle: event.title,
             userName: req.userName
@@ -178,7 +181,8 @@ router.post('/create-order', authenticateJWT, async (req, res) => {
 
 router.post('/verify-payment', authenticateJWT, async (req, res) => {
     try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, eventId } = req.body;
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, eventId, quantity } = req.body;
+        const qty = parseInt(quantity) || 1;
 
         const body = razorpay_order_id + "|" + razorpay_payment_id;
         const expectedSignature = crypto
@@ -195,35 +199,45 @@ router.post('/verify-payment', authenticateJWT, async (req, res) => {
         const eventsCollection = getEventsCollection();
         const userId = req.userId;
 
+        const tickets = [];
+        for(let i=0; i<qty; i++) {
+            tickets.push({
+                userId,
+                name: req.userName,
+                status: 'paid',
+                joinedAt: new Date(),
+                paymentId: razorpay_payment_id,
+                orderId: razorpay_order_id,
+                ticketId: new ObjectId().toString() // Unique Ticket ID
+            });
+        }
+
         const eventUpdate = await eventsCollection.updateOne(
             { 
                 _id: new ObjectId(eventId),
-                $expr: { $lt: [{ $size: "$attendees" }, "$maxAttendees"] },
-                "attendees.userId": { $ne: userId },
+                $expr: { $lt: [{ $add: [{ $size: "$attendees" }, qty] }, "$maxAttendees"] }, // Atomic-ish check
                 creatorId: { $ne: userId }
             },
             { 
                 $push: { 
-                    attendees: { 
-                        userId, 
-                        name: req.userName, 
-                        status: 'paid', // Mark as paid
-                        joinedAt: new Date(),
-                        paymentId: razorpay_payment_id,
-                        orderId: razorpay_order_id
-                    } 
+                    attendees: { $each: tickets } 
                 } 
             }
         );
 
         if (eventUpdate.matchedCount === 0) {
-            return res.status(400).json({ error: "Join failed: Event full or already joined." });
+            return res.status(400).json({ error: "Join failed: Event full or owner." });
         }
 
         await usersCollection.updateOne(
             { _id: new ObjectId(userId) },
             { $addToSet: { joinedEvents: eventId } }
         );
+
+        // Send Email Async (Don't await to keep UI fast)
+        const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) });
+        
+        sendTicketEmail(req.userEmail, event, tickets).catch(err => console.error("Background Email Error:", err));
 
         res.status(200).json({ success: true, message: "Payment verified and joined!" });
     } catch (e) {
@@ -250,6 +264,7 @@ router.post('/join', authenticateJWT, async (req, res) => {
             return res.status(402).json({ error: "Payment required for this event" });
         }
 
+        const ticketId = `free_${new ObjectId().toString()}`;
         const eventUpdate = await eventsCollection.updateOne(
             { 
                 _id: new ObjectId(eventId),
@@ -264,7 +279,8 @@ router.post('/join', authenticateJWT, async (req, res) => {
                         userId, 
                         name: req.userName, 
                         status: 'pending',
-                        joinedAt: new Date()
+                        joinedAt: new Date(),
+                        ticketId: ticketId // Added ticketId
                     } 
                 } 
             }
@@ -276,6 +292,16 @@ router.post('/join', authenticateJWT, async (req, res) => {
             { _id: new ObjectId(userId) },
             { $addToSet: { joinedEvents: eventId } }
         );
+
+        // Send Email Async
+        const ticketData = {
+            eventId,
+            userId,
+            userName: req.userName,
+            ticketId: ticketId,
+            valid: true
+        };
+        sendTicketEmail(req.userEmail, event, ticketData).catch(err => console.error("Background Email Error:", err));
 
         res.status(200).json({ success: true, message: "Successfully joined!" });
     } catch (e) { 

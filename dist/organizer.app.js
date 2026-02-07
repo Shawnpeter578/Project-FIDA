@@ -89,16 +89,39 @@ class OrganizerConsole {
             ticketsSold += attendeeCount;
             revenue += (attendeeCount * (e.price || 0));
 
-            // Mock activity from attendees
+            // Aggregated Activity Logic
             if (e.attendees && e.attendees.length > 0) {
-                // Get latest 2
-                const latest = e.attendees.slice(-2);
-                latest.forEach(a => {
+                 const groups = {};
+                 e.attendees.forEach(a => {
+                    // Use paymentId for grouping transactions. 
+                    // If paymentId is missing (free event or old data), fall back to unique ticketId.
+                    const key = a.paymentId || a.ticketId || `single_${Math.random()}`;
+                    
+                    if (!groups[key]) {
+                        groups[key] = {
+                            name: a.name || 'Guest',
+                            count: 0,
+                            time: a.joinedAt || new Date(),
+                            isPaid: !!a.paymentId,
+                            eventTitle: e.title
+                        };
+                    }
+                    groups[key].count++;
+                 });
+
+                 Object.values(groups).forEach(g => {
+                    let text = '';
+                    if (g.count > 1) {
+                        text = `${g.name} bought <span style="color:var(--text-main); font-weight:700;">${g.count} tickets</span> for ${g.eventTitle}`;
+                    } else {
+                        text = `${g.name} ${g.isPaid ? 'bought a ticket for' : 'joined'} ${g.eventTitle}`;
+                    }
+
                     recentActivity.push({
-                        text: `${a.name || 'Guest'} joined ${e.title}`,
-                        time: a.joinedAt || new Date()
+                        text: text,
+                        time: g.time
                     });
-                });
+                 });
             }
         });
 
@@ -222,6 +245,7 @@ class OrganizerConsole {
 
             const formData = new FormData();
             formData.append('title', document.getElementById('cTitle').value);
+            formData.append('description', document.getElementById('cDesc').value);
             formData.append('location', document.getElementById('cLoc').value);
             formData.append('date', document.getElementById('cDate').value);
             formData.append('time', document.getElementById('cTime').value);
