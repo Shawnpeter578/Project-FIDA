@@ -31,21 +31,33 @@ const sendTicketEmail = async (toEmail, event, tickets) => {
         // Ensure tickets is an array
         const ticketArray = Array.isArray(tickets) ? tickets : [tickets];
 
-        // Generate QRs in parallel
+        // Generate QRs in parallel with CIDs
         const qrCodes = await Promise.all(ticketArray.map(async (t) => {
             const payload = {
                 eventId: event._id,
                 ticketId: t.ticketId,
                 userId: t.userId
             };
-            const url = await generateQRCode(payload);
-            return { id: t.ticketId, url };
+            const dataUri = await generateQRCode(payload);
+            return { 
+                id: t.ticketId, 
+                dataUri, 
+                cid: `qr-${t.ticketId}@gigbycity.com` // Unique CID
+            };
+        }));
+
+        // Prepare attachments for Nodemailer
+        const attachments = qrCodes.map(qr => ({
+            filename: `ticket-${qr.id}.png`,
+            content: qr.dataUri.split("base64,")[1],
+            encoding: 'base64',
+            cid: qr.cid
         }));
 
         const qrHtml = qrCodes.map((qr, index) => `
             <div style="margin: 30px 0; text-align: center; border-bottom: 1px dashed #ddd; padding-bottom: 20px;">
                 <p style="font-weight:bold; color: #E11D48;">Ticket #${index + 1}</p>
-                <img src="${qr.url}" alt="Ticket QR Code" style="width: 200px; height: 200px; border: 2px solid #E11D48; border-radius: 10px;" />
+                <img src="cid:${qr.cid}" alt="Ticket QR Code" style="width: 200px; height: 200px; border: 2px solid #E11D48; border-radius: 10px;" />
                 <p style="font-size: 10px; color: #666; margin-top:5px;">ID: ${qr.id}</p>
             </div>
         `).join('');
@@ -70,11 +82,7 @@ const sendTicketEmail = async (toEmail, event, tickets) => {
                     <p>See you there,<br>The GigByCity Team</p>
                 </div>
             `,
-            // Note: Embedding multiple base64 images as attachments is tricky with CID. 
-            // We rely on data URIs in the HTML for simplicity here, 
-            // or we would need to map attachments to CIDs.
-            // Many clients block data URIs. For production, upload to Cloudinary or use CID properly.
-            // For this prototype, we'll try to stick to Data URIs or single attachment if length is 1.
+            attachments: attachments
         });
 
         console.log("Message sent: %s", info.messageId);
