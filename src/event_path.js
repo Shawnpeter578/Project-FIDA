@@ -105,7 +105,7 @@ router.post('/', authenticateJWT, upload.single('image'), async (req, res) => {
 router.post('/checkin', authenticateJWT, async (req, res) => {
     try {
         const eventsCollection = getEventsCollection();
-        const { eventId, ticketId } = req.body; // Changed to ticketId
+        const { eventId, ticketId } = req.body; 
         
         if (!eventId || !ticketId) {
             return res.status(400).json({ error: "Missing eventId or ticketId" });
@@ -120,12 +120,26 @@ router.post('/checkin', authenticateJWT, async (req, res) => {
         }
 
         const result = await eventsCollection.updateOne(
-            { _id: new ObjectId(eventId), "attendees.ticketId": ticketId },
+            { 
+                _id: new ObjectId(eventId), 
+                "attendees.ticketId": ticketId,
+                "attendees.status": { $ne: "checked-in" }
+            },
             { $set: { "attendees.$.status": "checked-in" } }
         );
 
         if (result.matchedCount === 0) {
-            return res.status(404).json({ error: "Ticket not found" });
+            // Check if it exists but was already checked in
+            const existing = await eventsCollection.findOne(
+                { _id: new ObjectId(eventId), "attendees.ticketId": ticketId },
+                { projection: { "attendees.$": 1 } }
+            );
+
+            if (existing && existing.attendees && existing.attendees[0].status === 'checked-in') {
+                return res.status(409).json({ error: "Ticket already used" });
+            } else {
+                return res.status(404).json({ error: "Ticket not found" });
+            }
         }
 
         res.status(200).json({ success: true, message: "Check-in successful" });

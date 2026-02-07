@@ -345,12 +345,24 @@ class OrganizerConsole {
         // Pause to prevent double scan
         this.scanner.pause();
 
-        const [eid, uid] = decodedText.split('-');
+        const [eventId, ticketId] = decodedText.split('-');
         
-        // Call backend with ID directly
-        const res = await this.performCheckin(eid, uid);
+        // Call backend with correct ticketId
+        const res = await this.performCheckin(eventId, ticketId);
         
-        this.showScanResult(res.success, res.message || res.error);
+        if (res.success) {
+            this.showScanResult(true, 'ACCESS GRANTED');
+            this.showToast('Check-in Successful', 'success');
+        } else if (res.error === 'Ticket already used') {
+            this.showScanResult(false, 'ALREADY SCANNED'); 
+            // Override color for "Already Scanned" case (Orange/Warning)
+            const title = document.getElementById('res-title');
+            if(title) title.style.color = '#F59E0B'; 
+            this.showToast('Ticket used previously', 'error');
+        } else {
+            this.showScanResult(false, res.error || 'INVALID TICKET');
+            this.showToast(res.error || 'Check-in Failed', 'error');
+        }
         
         // Resume after delay
         setTimeout(() => {
@@ -359,7 +371,7 @@ class OrganizerConsole {
         }, 2000);
     }
 
-    async performCheckin(eventId, userId) {
+    async performCheckin(eventId, ticketId) {
         try {
             const res = await fetch('/api/events/checkin', {
                 method: 'POST',
@@ -367,7 +379,7 @@ class OrganizerConsole {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${this.token}`
                 },
-                body: JSON.stringify({ eventId, userId })
+                body: JSON.stringify({ eventId, ticketId })
             });
             const data = await res.json();
             if (res.ok) {

@@ -33,11 +33,7 @@ const sendTicketEmail = async (toEmail, event, tickets) => {
 
         // Generate QRs in parallel with CIDs
         const qrCodes = await Promise.all(ticketArray.map(async (t) => {
-            const payload = {
-                eventId: event._id,
-                ticketId: t.ticketId,
-                userId: t.userId
-            };
+            const payload = `${event._id}-${t.ticketId}`;
             const dataUri = await generateQRCode(payload);
             return { 
                 id: t.ticketId, 
