@@ -56,7 +56,7 @@ const sendTicketEmail = async (toEmail, event, tickets) => {
             subject: `Tickets Confirmed da: ${event.title}`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-                    <h1 style="color: #E11D48;">You're going!</h1>
+                    <h1 style="color: #E11D48;">You're going da!</h1>
                     <p>Hi <strong>${ticketArray[0].name || 'Fan'}</strong>,</p>
                     <p>Your <strong>${ticketArray.length}</strong> ticket(s) for <strong>${event.title}</strong> are confirmed.</p>
                     
