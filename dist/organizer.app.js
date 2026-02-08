@@ -206,15 +206,15 @@ class OrganizerConsole {
         container.innerHTML = filtered.map(a => {
             const isChecked = a.status === 'checked-in';
             const initials = (a.name || 'G').charAt(0).toUpperCase();
-            
+            console.log(a.ticketId)
             return `
             <div class="list-card" style="cursor:default">
-                <div style="width:40px; height:40px; background:var(--border); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.8rem;">${initials}</div>
+                <div style="width:40px; height:40px; background:var(--border); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.8rem;">${initials}</div> 
                 <div class="list-info">
                     <div class="list-title" style="font-size:0.95rem;">${a.name || 'Unknown Guest'}</div>
                     <div class="list-sub">ID: ...${a.userId.slice(-4)}</div>
                 </div>
-                <button style="border:none; background:${isChecked ? 'var(--input-bg)' : 'var(--primary)'}; color:${isChecked ? 'var(--text-ter)' : 'var(--primary-inv)'}; padding:8px 16px; border-radius:20px; font-size:0.8rem; font-weight:600;" onclick="app.manualCheckin('${a.userId}', '${a.name}')">
+                <button style="border:none; background:${isChecked ? 'var(--input-bg)' : 'var(--primary)'}; color:${isChecked ? 'var(--text-ter)' : 'var(--primary-inv)'}; padding:8px 16px; border-radius:20px; font-size:0.8rem; font-weight:600;" onclick="app.manualCheckin('${a.userId}', '${a.ticketId}')">
                     ${isChecked ? 'Arrived' : 'Check In'}
                 </button>
             </div>`;
@@ -223,7 +223,7 @@ class OrganizerConsole {
 
     async manualCheckin(userId, userName) {
         // Optimistic UI update could happen here, but lets stick to source of truth
-        const res = await this.performCheckin(this.activeEventId, userId);
+        const res = await this.performCheckin(this.activeEventId, userName);
         if (res.success) {
             await this.fetchData();
             this.renderGuests(); // Re-render to show updated status
@@ -311,6 +311,13 @@ class OrganizerConsole {
     // --- SCANNER ---
 
     toggleScanner() {
+        // 0. Event Selection Check
+        if (!this.activeEventId && !this.isScanning) {
+            this.showToast('Please select an event from the Events tab first!', 'error');
+            if (window.switchTab) window.switchTab('events', document.querySelectorAll('.nav-item')[1]);
+            return;
+        }
+
         const overlay = document.getElementById('scanner-overlay');
         if (this.isScanning) {
             // Stop
@@ -325,7 +332,21 @@ class OrganizerConsole {
             overlay.classList.add('active');
             
             this.scanner = new Html5Qrcode("reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            
+            // OPTIMIZED CONFIG: Higher FPS and 720p resolution for faster detection
+            const config = { 
+                fps: 30, 
+                qrbox: { width: 250, height: 250 },
+                videoConstraints: {
+                    facingMode: "environment",
+                    width: { ideal: 720 },
+                    height: { ideal: 720 },
+                    advanced: [{ focusMode: "continuous" }]
+                }
+            };
+            
+            // Only look for QR codes to save CPU cycles
+            const formats = [ Html5QrcodeSupportedFormats.QR_CODE ];
             
             this.scanner.start(
                 { facingMode: "environment" },
@@ -334,7 +355,7 @@ class OrganizerConsole {
             ).catch(err => {
                 this.isScanning = false;
                 overlay.classList.remove('active');
-                this.showToast('Camera access denied', 'error');
+                this.showToast('Camera access denied: ' + err, 'error');
             });
         }
     }
@@ -342,24 +363,42 @@ class OrganizerConsole {
     async onScanSuccess(decodedText) {
         if (!this.isScanning) return;
         
+        // 1. Instant Physics Feedback
+        if (navigator.vibrate) navigator.vibrate(200);
+        
         // Pause to prevent double scan
         this.scanner.pause();
 
-        const [eid, uid] = decodedText.split('-');
+        const [eventId, ticketId] = decodedText.split('-');
         
-        // Call backend with ID directly
-        const res = await this.performCheckin(eid, uid);
+        // 2. Immediate UI Feedback (Transition to "Verifying")
+        this.showScanResult(null, 'Verifying...'); 
         
-        this.showScanResult(res.success, res.message || res.error);
+        // 3. Backend Verification
+        const res = await this.performCheckin(eventId, ticketId);
         
-        // Resume after delay
+        if (res.success) {
+            this.showScanResult(true, 'ACCESS GRANTED');
+            this.showToast('Check-in Successful', 'success');
+        } else if (res.error === 'Ticket already used') {
+            this.showScanResult(false, 'ALREADY SCANNED'); 
+            // Override color for "Already Scanned" case (Orange/Warning)
+            const title = document.getElementById('res-title');
+            if(title) title.style.color = '#F59E0B'; 
+            this.showToast('Ticket used previously', 'error');
+        } else {
+            this.showScanResult(false, res.error || 'INVALID TICKET');
+            this.showToast(res.error || 'Check-in Failed', 'error');
+        }
+        
+        // 4. Resume after delay
         setTimeout(() => {
             document.getElementById('scan-pop').classList.remove('show');
             if (this.isScanning) this.scanner.resume();
         }, 2000);
     }
 
-    async performCheckin(eventId, userId) {
+    async performCheckin(eventId, ticketId) {
         try {
             const res = await fetch('/api/events/checkin', {
                 method: 'POST',
@@ -367,7 +406,7 @@ class OrganizerConsole {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${this.token}`
                 },
-                body: JSON.stringify({ eventId, userId })
+                body: JSON.stringify({ eventId, ticketId })
             });
             const data = await res.json();
             if (res.ok) {
@@ -387,20 +426,26 @@ class OrganizerConsole {
         const title = document.getElementById('res-title');
         const desc = document.getElementById('res-msg');
         
-        title.innerText = success ? 'Verified' : 'Error';
-        title.style.color = success ? '#059669' : '#DC2626';
-        desc.innerText = msg;
+        if (success === null) {
+            title.innerText = 'Checking...';
+            title.style.color = 'var(--text-sec)';
+        } else {
+            title.innerText = success ? 'Verified' : 'Error';
+            title.style.color = success ? '#059669' : '#DC2626';
+        }
         
+        desc.innerText = msg;
         pop.classList.add('show');
     }
 
     // --- UTILS ---
 
-    showToast(msg, type='info') {
-        // Simple alert for now or custom toast if UI existed
-        // We will just log it or alert if error
-        if(type === 'error') alert(msg);
-        else console.log(msg);
+    showToast(msg) {
+        const t = document.getElementById('toast');
+        if (!t) return;
+        document.getElementById('toastMsg').textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
     }
 
     animateValue(id, end, prefix='') {

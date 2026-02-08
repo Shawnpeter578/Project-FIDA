@@ -8,9 +8,10 @@ GigByCity is a social event platform designed to connect hosts with attendees fo
 *   **Framework:** Express.js (v5.x)
 *   **Database:** MongoDB (Native Driver)
 *   **Authentication:** 
-    *   **Strategies:** Google OAuth (GIS) & Email/Password (Scrypt hashing).
+    *   **Strategies:** Google OAuth (GIS), Apple Auth (Beta) & Email/Password (Scrypt hashing).
     *   **Session:** JWT (JSON Web Tokens) stored in `localStorage` (`fida_token`).
 *   **File Storage:** Cloudinary (via Multer).
+*   **Email:** Brevo (Nodemailer) with CID-embedded QR codes.
 *   **Frontend:** Vanilla HTML/CSS/JS (SPA-like experience within `index.html`).
 
 ## Architecture
@@ -21,16 +22,20 @@ The application follows a simplified MVC structure where controllers are integra
 *   **Database:** `src/database/mongodb.js` (Singleton connection pattern).
 *   **Routes:**
     *   `src/auth_path.js`: Authentication (Signup, Login, Me, Google) & Profile Management (`PUT /me`).
-    *   `src/event_path.js`: Event CRUD, Joining, Check-in, & Paginated Feed (`GET /`).
+    *   `src/event_path.js`: Event CRUD, Joining (Razorpay), Check-in, Artist Applications & Feed.
 
 ### Key Directories
 *   `src/`: Backend logic.
-*   `dist/`: Public frontend assets (served statically).
-    *   `index.html`: Main application logic (Dashboard, Feed, Scanner, Profile).
-    *   `login.html`: Dedicated authentication page.
+    *   `auth/`: OAuth strategies and JWT middleware.
+    *   `database/`: MongoDB and Cloudinary integrations.
+    *   `utils/`: Email utilities and helper functions.
+*   `dist/`: Public frontend assets.
+    *   `index.html`: Main User Dashboard & Feed.
+    *   `login.html`: Unified authentication page.
+    *   `organizer.html` / `organizer.app.js`: Organizer Management Console.
+    *   `artist-dashboard.html`: Artist-specific interface.
     *   `script.js`: Core API wrapper (`FidaAPI`).
-    *   `style.css`: "Platinum & Crimson" theme styles.
-*   `tests/`: Jest integration tests (Auth, Events, Profile).
+*   `tests/`: Jest integration tests (Auth, Events, Profile, Email).
 *   `gemini_changes/`: Automated change logs.
 
 ## Building and Running
@@ -43,8 +48,8 @@ The application follows a simplified MVC structure where controllers are integra
 ### Commands
 | Command | Description |
 | :--- | :--- |
-| `npm start` | Starts the server (`node src/server.js`). |
-| `npm test` | Runs Jest tests. |
+| `npm start` | Starts the production server (`node src/server.js`). |
+| `npm test` | Runs Jest integration tests. |
 
 ## Configuration
 Requires `.env` file:
@@ -53,6 +58,10 @@ PORT=3000
 DATABASE_URL=mongodb://...
 JWT_SECRET=...
 GOOGLE_CLIENT_ID=...
+BREVO_USER=...
+BREVO_PASS=...
+RAZOR_KEY=...
+RAZOR_SECRET_KEY=...
 CLOUDINARY_cloud_name=...
 CLOUDINARY_api_key=...
 CLOUDINARY_api_secret=...
@@ -60,12 +69,16 @@ CLOUDINARY_api_secret=...
 
 ## Features
 *   **Role-Based Access:** 
-    *   **User:** Join events, view passes, generate QR codes, manage profile.
-    *   **Organizer (Host):** Create events, scan QR codes, manage guest lists, manage organization profile.
+    *   **User:** Join events (Free/Paid), view passes, generate QR codes, manage profile.
+    *   **Organizer (Host):** Create events, scan QR codes (Check-in), manage guest lists, view sales analytics.
+    *   **Artist:** Apply to perform at events, manage artist profile.
 *   **Event Feed:** Optimized "Recent Releases" ranking with lazy loading (pagination) support.
-*   **Event Management:** Image uploads, categorical filtering, mode (online/offline).
-*   **Ticket System:** QR code generation (Frontend) and Validation (Backend).
-*   **UI:** Glassmorphism design, "Dock" navigation, animated transitions.
+*   **Event Management:** Image uploads, categorical filtering, mode (online/offline), artist application toggles.
+*   **Ticket System:** 
+    *   **Purchase:** Integrated Razorpay for paid events with multi-ticket support.
+    *   **Delivery:** Automated email delivery with CID-embedded QR codes.
+    *   **Validation:** Secure hyphenated QR format (`eventId-ticketId`) with replay protection (Check-in).
+*   **UI:** Glassmorphism "Ultra UI" design, "Dock" navigation, Crimson & Platinum theme.
 
 ## Code of Conduct
 1.  **Transparency:** All structural or logic changes performed by the agent MUST be logged in the `gemini_changes/` folder with a timestamped Markdown file.

@@ -478,11 +478,14 @@
 
         async function handleGoogleCredentialResponse(response) {
             try {
+                let backendRole = 'user';
+                if (currentRole === 'host') backendRole = 'organizer';
+
                 // We pass the currently selected role to the backend
                 const res = await fetch('/api/auth/google', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: response.credential, role: currentRole })
+                    body: JSON.stringify({ token: response.credential, role: backendRole })
                 });
                 
                 const data = await res.json();
@@ -558,6 +561,7 @@
         function loginUser(data) {
             localStorage.setItem('fida_token', data.token);
             localStorage.setItem('fida_user', JSON.stringify(data.user));
+           
             redirectUser(currentRole);
         }
 
