@@ -110,41 +110,58 @@ router.post('/checkin', authenticateJWT, async (req, res) => {
         if (!eventId || !ticketId) {
             return res.status(400).json({ error: "Missing eventId or ticketId" });
         }
+        
+        // FIX: Trim inputs to avoid invisible char issues
+        const cleanTicketId = ticketId.trim();
 
         const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) });
         if (!event) return res.status(404).json({ error: "Event not found" });
 
-        // Allow Organizer Role OR the Event Creator
         if (req.userRole !== 'organizer' && event.creatorId !== req.userId) {
             return res.status(403).json({ error: "Unauthorized" });
         }
 
+        // 1. Atomic Check-in with STRICT Matching
+        // Use $elemMatch to ensure we target the EXACT ticket element that is NOT checked-in
         const result = await eventsCollection.updateOne(
             { 
                 _id: new ObjectId(eventId), 
-                "attendees.ticketId": ticketId,
-                "attendees.status": { $ne: "checked-in" }
+                attendees: { 
+                    $elemMatch: { 
+                        ticketId: cleanTicketId, 
+                        status: { $ne: "checked-in" } 
+                    } 
+                }
             },
             { $set: { "attendees.$.status": "checked-in" } }
         );
 
+        // 2. Diagnostic Fallback (If Update Failed)
         if (result.matchedCount === 0) {
-            // Check if it exists but was already checked in
+            // Check if ticket exists at all (ignoring status)
             const existing = await eventsCollection.findOne(
-                { _id: new ObjectId(eventId), "attendees.ticketId": ticketId },
+                { 
+                    _id: new ObjectId(eventId), 
+                    attendees: { $elemMatch: { ticketId: cleanTicketId } } 
+                },
                 { projection: { "attendees.$": 1 } }
             );
 
-            if (existing && existing.attendees && existing.attendees[0].status === 'checked-in') {
-                return res.status(409).json({ error: "Ticket already used" });
-            } else {
-                return res.status(404).json({ error: "Ticket not found" });
+            if (existing && existing.attendees && existing.attendees.length > 0) {
+                const ticket = existing.attendees[0];
+                if (ticket.status === 'checked-in') {
+                    return res.status(409).json({ error: "Ticket already used" });
+                }
             }
+            
+            // If we are here: Ticket ID truly doesn't exist in this event
+            console.log(`Ticket not found: ${cleanTicketId} in event ${eventId}`);
+            return res.status(404).json({ error: "Ticket not found" });
         }
 
         res.status(200).json({ success: true, message: "Check-in successful" });
     } catch (e) {
-        console.error(e);
+        console.error("Check-in Error:", e);
         res.status(500).json({ error: "Check-in failed" });
     }
 });

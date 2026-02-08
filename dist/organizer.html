@@ -379,6 +379,16 @@
         }
         .fab:active { transform: scale(0.9); }
         @media (min-width: 1024px) { .fab { display: none; } }
+        .toast {
+            position: fixed; top: 20px; left: 50%; transform: translate(-50%, -100px);
+            background: var(--bg-surface-glass); backdrop-filter: blur(16px);
+            border: 1px solid var(--border-strong); padding: 14px 28px;
+            border-radius: 100px; display: flex; align-items: center; gap: 12px;
+            z-index: 6000; box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+            transition: transform 0.6s var(--ease-spring);
+        }
+        .toast.show { transform: translate(-50%, 0); }
+        .toast-icon { width: 12px; height: 12px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 12px var(--accent); }
 
     </style>
 </head>
@@ -640,7 +650,10 @@
             <p id="res-msg">Message</p>
         </div>
     </div>
-
+      <div id="toast" class="toast">
+          <div class="toast-icon"></div>
+          <span id="toastMsg" style="font-weight:600; font-size:0.95rem;">Notification</span>
+      </div>
     <script src="organizer.app.js"></script>
     <script>
         function logout() {
