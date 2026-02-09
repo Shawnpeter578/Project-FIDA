@@ -10,6 +10,7 @@ GigByCity is a social event platform designed to connect hosts with attendees fo
 *   **Authentication:** 
     *   **Strategies:** Google OAuth (GIS), Apple Auth (Beta) & Email/Password (Scrypt hashing).
     *   **Session:** JWT (JSON Web Tokens) stored in `localStorage` (`fida_token`).
+    *   **Admin Session:** `express-session` (Cookie-based).
 *   **File Storage:** Cloudinary (via Multer).
 *   **Email:** Brevo (Nodemailer) with CID-embedded QR codes.
 *   **Frontend:** Vanilla HTML/CSS/JS (SPA-like experience within `index.html`).
@@ -23,6 +24,7 @@ The application follows a simplified MVC structure where controllers are integra
 *   **Routes:**
     *   `src/auth_path.js`: Authentication (Signup, Login, Me, Google) & Profile Management (`PUT /me`).
     *   `src/event_path.js`: Event CRUD, Joining (Razorpay), Check-in, Artist Applications & Feed.
+    *   `src/admin_path.js`: Admin Dashboard API (Login, Data, Delete).
 
 ### Key Directories
 *   `src/`: Backend logic.
@@ -34,6 +36,7 @@ The application follows a simplified MVC structure where controllers are integra
     *   `login.html`: Unified authentication page.
     *   `organizer.html` / `organizer.app.js`: Organizer Management Console.
     *   `artist-dashboard.html`: Artist-specific interface.
+    *   `admin.html`: Admin Dashboard SPA.
     *   `script.js`: Core API wrapper (`FidaAPI`).
 *   `tests/`: Jest integration tests (Auth, Events, Profile, Email).
 *   `gemini_changes/`: Automated change logs.
@@ -65,6 +68,8 @@ RAZOR_SECRET_KEY=...
 CLOUDINARY_cloud_name=...
 CLOUDINARY_api_key=...
 CLOUDINARY_api_secret=...
+ADMIN_PASSWORD=...
+SESSION_SECRET=...
 ```
 
 ## Features
@@ -72,6 +77,12 @@ CLOUDINARY_api_secret=...
     *   **User:** Join events (Free/Paid), view passes, generate QR codes, manage profile.
     *   **Organizer (Host):** Create events, scan QR codes (Check-in), manage guest lists, view sales analytics.
     *   **Artist:** Apply to perform at events, manage artist profile.
+*   **Admin Dashboard:**
+    *   Secure password-based login (Session auth).
+    *   Tabbed view for Users and Events.
+    *   User role filtering and management (Delete).
+    *   Event management (Delete).
+    *   **Organizer Analytics:** Revenue calculation and event history in expanded user view.
 *   **Event Feed:** Optimized "Recent Releases" ranking with lazy loading (pagination) support.
 *   **Event Management:** Image uploads, categorical filtering, mode (online/offline), artist application toggles.
 *   **Ticket System:** 
