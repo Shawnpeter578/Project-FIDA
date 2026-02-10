@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GigByCity Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #f0f2f5;
+            --text-main: #1a1a1a;
+            --text-muted: #666;
+            --border: #ddd;
+            --card-bg: #fff;
+            --accent: #ff4d4f;
+            --primary: #007bff;
+            --success: #52c41a;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--bg-body);
+            color: var(--text-main);
+        }
+
+        /* Utils */
+        .hidden { display: none !important; }
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.8; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-danger { background: var(--accent); color: white; }
+        
+        /* Login */
+        #loginView {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .login-card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 320px;
+        }
+        .inp, .select-inp {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        
+        /* Dashboard */
+        header {
+            background: var(--card-bg);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        h2 { margin-top: 0; padding-bottom: 1rem; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { font-weight: 600; color: var(--text-muted); font-size: 0.9rem; }
+        tr:last-child td { border-bottom: none; }
+        
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .role-user { background: #e6f7ff; color: #1890ff; }
+        .role-organizer { background: #f6ffed; color: #52c41a; }
+        .role-artist { background: #fff7e6; color: #fa8c16; }
+
+        /* Details Row */
+        .details-row { background: #f9f9f9; display: none; }
+        .details-row.open { display: table-row; }
+        .details-content { padding: 20px; }
+        .toggle-btn { 
+            background: none; border: none; cursor: pointer; font-size: 1.2rem; transition: transform 0.2s; 
+            width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .toggle-btn.rotated { transform: rotate(90deg); }
+        
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .stat-card { background: white; padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
+        .stat-val { font-size: 1.2rem; font-weight: 700; color: var(--primary); }
+        .stat-label { font-size: 0.8rem; color: var(--text-muted); }
+
+    </style>
+</head>
+<body>
+
+    <!-- Login View -->
+    <div id="loginView">
+        <div class="login-card">
+            <h2 style="border:none; text-align:center;">Admin Access</h2>
+            <div id="loginError" style="color:var(--accent); margin-bottom:10px; font-size:0.9rem;"></div>
+            <form onsubmit="handleLogin(event)">
+                <input type="password" id="password" class="inp" placeholder="Enter Password" required>
+                <button type="submit" class="btn btn-primary" style="width:100%;">LOGIN</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard View -->
+    <div id="dashboardView" class="hidden">
+        <header>
+            <div style="font-weight:700; font-size:1.2rem;">GigByCity <span style="font-weight:400; color:var(--text-muted);">Admin</span></div>
+            <button onclick="handleLogout()" class="btn btn-danger">LOGOUT</button>
+        </header>
+        <main>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('users', this)">Users</button>
+                <button class="tab-btn" onclick="switchTab('events', this)">Events</button>
+            </div>
+
+            <section id="sectionUsers">
+                <h2>
+                    Users (<span id="userCount">0</span>)
+                    <select id="userFilter" class="select-inp" style="width:auto; margin:0;" onchange="applyUserFilter(this.value)">
+                        <option value="ALL">All Roles</option>
+                        <option value="user">User</option>
+                        <option value="organizer">Organizer</option>
+                        <option value="artist">Artist</option>
+                    </select>
+                </h2>
+                <div style="overflow-x:auto;">
+                    <table id="usersTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"></th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Joined</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="sectionEvents" class="hidden">
+                <h2>Events (<span id="eventCount">0</span>)</h2>
+                <div style="overflow-x:auto;">
+                    <table id="eventsTable">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Date</th>
+                                <th>Creator</th>
+                                <th>Attendees</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // State
+        let isLoggedIn = false;
+        let allUsers = [];
+        let allEvents = [];
+
+        // Init
+        window.addEventListener('load', checkAuth);
+
+        async function checkAuth() {
+            try {
+                const res = await fetch('/admin/auth-status');
+                const data = await res.json();
+                if (data.isAdmin) {
+                    showDashboard();
+                } else {
+                    showLogin();
+                }
+            } catch (e) {
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            document.getElementById('loginView').classList.remove('hidden');
+            document.getElementById('dashboardView').classList.add('hidden');
+        }
+
+        function showDashboard() {
+            document.getElementById('loginView').classList.add('hidden');
+            document.getElementById('dashboardView').classList.remove('hidden');
+            loadData();
+        }
+
+        function switchTab(tab, btn) {
+            // UI Toggle
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if(btn) btn.classList.add('active');
+
+            // Section Toggle
+            document.getElementById('sectionUsers').classList.add('hidden');
+            document.getElementById('sectionEvents').classList.add('hidden');
+            
+            if(tab === 'users') document.getElementById('sectionUsers').classList.remove('hidden');
+            if(tab === 'events') document.getElementById('sectionEvents').classList.remove('hidden');
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            const errEl = document.getElementById('loginError');
+            errEl.textContent = '';
+
+            try {
+                const res = await fetch('/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showDashboard();
+                } else {
+                    errEl.textContent = data.error || 'Login Failed';
+                }
+            } catch (e) {
+                errEl.textContent = 'Network Error';
+            }
+        }
+
+        async function handleLogout() {
+            await fetch('/admin/logout', { method: 'POST' });
+            showLogin();
+        }
+
+        async function loadData() {
+            try {
+                const res = await fetch('/admin/data');
+                const data = await res.json();
+                allUsers = data.users;
+                allEvents = data.events;
+                
+                applyUserFilter('ALL');
+                renderEvents(allEvents);
+            } catch (e) {
+                console.error(e);
+                alert('Failed to load data');
+            }
+        }
+
+        function applyUserFilter(role) {
+            const filtered = role === 'ALL' 
+                ? allUsers 
+                : allUsers.filter(u => (u.role || 'user') === role);
+            
+            renderUsers(filtered);
+        }
+
+        // --- LOGIC FOR REVENUE & STATS ---
+
+        function calculateOrganizerStats(userId) {
+            const userEvents = allEvents.filter(e => e.creatorId === userId);
+            let totalRevenue = 0;
+            let totalTickets = 0;
+
+            userEvents.forEach(e => {
+                const count = e.attendees ? e.attendees.length : 0;
+                totalTickets += count;
+                totalRevenue += (count * (e.price || 0));
+            });
+
+            return { totalRevenue, totalTickets, eventCount: userEvents.length, events: userEvents };
+        }
+
+        function toggleDetails(userId) {
+            const row = document.getElementById(`details-${userId}`);
+            const btn = document.getElementById(`btn-details-${userId}`);
+            
+            if (row.classList.contains('open')) {
+                row.classList.remove('open');
+                btn.classList.remove('rotated');
+                btn.innerHTML = '&#9654;'; // Right Arrow
+            } else {
+                row.classList.add('open');
+                btn.classList.add('rotated');
+                btn.innerHTML = '&#9660;'; // Down Arrow
+            }
+        }
+
+        function renderUsers(users) {
+            document.getElementById('userCount').textContent = users.length;
+            const tbody = document.querySelector('#usersTable tbody');
+            
+            tbody.innerHTML = users.map(u => {
+                const role = u.role || 'user';
+                const stats = role === 'organizer' ? calculateOrganizerStats(u._id) : null;
+                
+                let detailsHtml = '';
+                if (role === 'organizer') {
+                    detailsHtml = `
+                        <div class="stat-grid">
+                            <div class="stat-card">
+                                <div class="stat-val">₹${stats.totalRevenue.toLocaleString()}</div>
+                                <div class="stat-label">Total Revenue</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-val">${stats.totalTickets}</div>
+                                <div class="stat-label">Tickets Sold</div>
+                            </div>
+                             <div class="stat-card">
+                                <div class="stat-val">${stats.eventCount}</div>
+                                <div class="stat-label">Events Hosted</div>
+                            </div>
+                        </div>
+                        <h4 style="margin:0 0 10px 0;">Hosted Events</h4>
+                        <ul style="margin:0; padding-left:20px; font-size:0.9rem;">
+                            ${stats.events.length > 0 ? stats.events.map(e => `<li>${e.title} (${e.attendees ? e.attendees.length : 0} guests)</li>`).join('') : '<li>No events hosted.</li>'}
+                        </ul>
+                    `;
+                } else {
+                     detailsHtml = `
+                        <p style="color:var(--text-muted); margin:0;">User has joined ${u.joinedEvents ? u.joinedEvents.length : 0} events.</p>
+                     `;
+                }
+
+                return `
+                <tr>
+                    <td>
+                        <button id="btn-details-${u._id}" class="toggle-btn" onclick="toggleDetails('${u._id}')">&#9654;</button>
+                    </td>
+                    <td>${u.name || 'N/A'}</td>
+                    <td>${u.email}</td>
+                    <td><span class="badge role-${role}">${role}</span></td>
+                    <td>${u.joinedEvents ? u.joinedEvents.length : 0}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteItem('user', '${u._id}')">Delete</button>
+                    </td>
+                </tr>
+                <tr id="details-${u._id}" class="details-row">
+                    <td colspan="6">
+                        <div class="details-content">
+                            ${detailsHtml}
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        function renderEvents(events) {
+            document.getElementById('eventCount').textContent = events.length;
+            const tbody = document.querySelector('#eventsTable tbody');
+            tbody.innerHTML = events.map(e => `
+                <tr>
+                    <td>${e.title}</td>
+                    <td>${e.date}</td>
+                    <td>${e.creatorName || 'Unknown'}</td>
+                    <td>${e.attendees ? e.attendees.length : 0} / ${e.maxAttendees}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteItem('event', '${e._id}')">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function deleteItem(type, id) {
+            if (!confirm(`Are you sure you want to delete this ${type}?`)) return;
+
+            try {
+                const res = await fetch(`/admin/${type}/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    loadData(); // Reload
+                } else {
+                    alert('Delete failed');
+                }
+            } catch (e) {
+                alert('Network Error');
+            }
+        }
+    </script>
+</body>
+</html>
