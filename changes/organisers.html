@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#FFFFFF">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>GigByCity Pro</title>
+    <title>GigByCity Host</title>
 
     <!-- Typography: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,7 +21,7 @@
 
     <style>
         :root {
-            /* Palette: Matte Red & Clean White */
+            /* Palette: Light Mode (Default) */
             --bg-body: #FFFFFF;
             --bg-card: #FFFFFF;
             --bg-subtle: #FAFAFA;
@@ -33,7 +33,7 @@
             
             --border: #E5E7EB;
             
-            /* Matte Red Accent */
+            /* Brand Colors */
             --accent: #B91C1C; 
             --accent-light: #FEF2F2;
             --accent-inv: #FFFFFF;
@@ -56,6 +56,32 @@
             --trans-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
         }
 
+        /* Dark Mode Overrides */
+        body.dark-mode {
+            --bg-body: #111111;
+            --bg-card: #1c1c1c;
+            --bg-subtle: #262626;
+            --bg-input: #2d2d2d;
+            
+            /* High contrast white text */
+            --text-primary: #FFFFFF;
+            --text-secondary: #E5E5E5; 
+            --text-tertiary: #A3A3A3;
+            
+            --border: #333333;
+            
+            --accent: #ef4444; 
+            --accent-light: #450a0a;
+            --accent-inv: #ffffff;
+            
+            --success: #34d399;
+            --success-bg: #064e3b;
+            --error: #f87171;
+            --error-bg: #7f1d1d;
+            --warn: #fbbf24;
+            --warn-bg: #78350f;
+        }
+
         /* --- Reset & Base --- */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; user-select: none; }
         input, textarea { user-select: text; }
@@ -69,6 +95,7 @@
             flex-direction: column;
             overflow: hidden;
             -webkit-font-smoothing: antialiased;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         button { font-family: inherit; cursor: pointer; border: none; background: none; touch-action: manipulation; }
@@ -79,6 +106,7 @@
         .h3 { font-size: 16px; font-weight: 600; }
         .text-sm { font-size: 14px; color: var(--text-secondary); font-weight: 400; line-height: 1.4; }
         .text-xs { font-size: 12px; color: var(--text-tertiary); font-weight: 500; }
+        .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 
         /* --- Layout Shell --- */
         .app-shell {
@@ -90,20 +118,23 @@
             position: relative;
         }
 
-        /* --- Bottom Navigation --- */
+        /* --- Bottom Navigation (Mobile Default) --- */
         .nav-container {
             position: fixed;
             bottom: 0; left: 0; right: 0;
             height: calc(var(--nav-height) + var(--safe-bottom));
-            background: rgba(255, 255, 255, 0.85); /* More transparent */
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border-top: 1px solid rgba(0,0,0,0.05); /* Softer border */
+            border-top: 1px solid var(--border);
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             padding-bottom: var(--safe-bottom);
             z-index: 100;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+        }
+        body.dark-mode .nav-container {
+            background: rgba(28, 28, 28, 0.85);
+            border-top: 1px solid rgba(255,255,255,0.05);
         }
 
         .nav-item {
@@ -112,9 +143,9 @@
             gap: 4px;
             transition: all 0.2s ease;
             position: relative;
+            cursor: pointer;
         }
         
-        /* Icon Wrapper for better centering and active states */
         .nav-icon-box {
             width: 32px; height: 32px;
             border-radius: 12px;
@@ -125,7 +156,6 @@
         .nav-item svg { width: 22px; height: 22px; stroke-width: 2px; }
         .nav-item span { font-size: 10px; font-weight: 600; letter-spacing: 0.02em; transition: color 0.2s; }
 
-        /* Active State */
         .nav-item.active .nav-icon-box {
             background: var(--accent-light);
             color: var(--accent);
@@ -156,45 +186,53 @@
             margin-bottom: 16px;
         }
 
-        /* --- NEW EVENT CARD STYLE --- */
+        /* --- Pulse / Stats Styles --- */
+        .stat-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+        .stat-box {
+            background: var(--bg-subtle); padding: 12px; border-radius: 12px; text-align: center;
+            border: 1px solid transparent; transition: border-color 0.2s;
+        }
+        .stat-box:active { border-color: var(--accent); }
+        .stat-label { font-size: 10px; text-transform: uppercase; color: var(--text-tertiary); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .stat-val { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+        
+        /* Progress Bar */
+        .progress-container {
+            height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 8px;
+        }
+        .progress-bar {
+            height: 100%; background: var(--accent); border-radius: 3px; width: 0%; transition: width 0.5s ease;
+        }
+
+        /* --- Event Card --- */
         .event-card {
             background: var(--bg-card);
             border-radius: var(--radius-lg);
             overflow: hidden;
             box-shadow: 0 8px 24px rgba(0,0,0,0.04);
-            border: 1px solid rgba(0,0,0,0.03);
+            border: 1px solid var(--border);
             margin-bottom: 20px;
             position: relative;
             transition: transform 0.1s;
+            cursor: pointer;
         }
         .event-card:active { transform: scale(0.98); }
         
         .event-card-image {
-            width: 100%; height: 160px; object-fit: cover;
+            width: 100%; height: 140px; object-fit: cover;
             display: block;
         }
-        .event-card-overlay {
-            position: absolute; top: 12px; left: 12px;
-            background: rgba(255,255,255,0.95); backdrop-filter: blur(4px);
+        .event-status-badge {
+            position: absolute; top: 12px; right: 12px;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
             padding: 4px 10px; border-radius: 8px;
-            font-size: 12px; font-weight: 700; color: var(--text-primary);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-size: 10px; font-weight: 700; color: white; text-transform: uppercase;
         }
+        .status-live { background: var(--success); color: white; }
+        .status-draft { background: var(--text-tertiary); color: white; }
+        .status-soldout { background: var(--accent); color: white; }
+
         .event-card-body { padding: 16px; }
-
-        .stats-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;
-        }
-
-        .chart-container {
-            height: 100px; display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
-            margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--bg-subtle);
-        }
-        .chart-bar {
-            background: var(--bg-input); border-radius: 4px; flex: 1; transition: height 0.5s ease;
-            min-height: 4px; position: relative;
-        }
-        .chart-bar.active { background: var(--accent); opacity: 0.8; }
 
         .list-container { display: flex; flex-direction: column; gap: 12px; }
 
@@ -203,10 +241,11 @@
             padding: 16px;
             border-radius: var(--radius-md);
             background: var(--bg-card);
-            border: 1px solid transparent;
+            border: 1px solid var(--border);
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             transition: all 0.2s;
             position: relative;
+            cursor: pointer;
         }
         .list-item:active { transform: scale(0.98); background: var(--bg-subtle); }
         .list-item:not(:last-child) { margin-bottom: 8px; }
@@ -221,32 +260,48 @@
         }
 
         /* --- Forms --- */
-        .input-group { margin-bottom: 20px; }
+        .input-group { margin-bottom: 20px; position: relative; }
         .label { display: block; font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; margin-left: 2px; }
         .input {
             width: 100%; height: 56px;
-            border: 1px solid transparent; background: var(--bg-input);
+            border: 1px solid var(--border); background: var(--bg-input);
             border-radius: 14px;
             padding: 0 16px; font-size: 16px; font-family: inherit; color: var(--text-primary);
             transition: all 0.2s;
             -webkit-appearance: none;
         }
-        .input:focus { background: #fff; border-color: var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .input:focus { background: var(--bg-card); border-color: var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        
+        /* Icon Input Wrapper */
+        .input-with-icon { position: relative; }
+        .input-with-icon .input { padding-left: 48px; }
+        .input-icon {
+            position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+            color: var(--text-tertiary); pointer-events: none;
+        }
+        .input:focus + .input-icon, .input:focus ~ .input-icon { color: var(--accent); }
+
+        select.input {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+        }
         textarea.input { height: auto; padding-top: 16px; min-height: 100px; resize: none; }
         
         /* Toggle Switch */
         .toggle-switch {
-            width: 44px; height: 24px; background: var(--border); border-radius: 20px;
-            position: relative; transition: background 0.2s;
+            width: 52px; height: 32px; background: var(--bg-input); border-radius: 20px;
+            position: relative; transition: background 0.2s; cursor: pointer;
+            border: 1px solid var(--border);
         }
-        .toggle-switch.active { background: var(--accent); }
-        .toggle-switch::after {
-            content: ''; position: absolute; left: 2px; top: 2px;
-            width: 20px; height: 20px; background: white; border-radius: 50%;
-            transition: transform 0.2s var(--trans-spring);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .toggle-switch.active { background: var(--accent); border-color: var(--accent); }
+        .toggle-knob {
+            width: 26px; height: 26px; background: white; border-radius: 50%;
+            position: absolute; top: 2px; left: 2px; transition: transform 0.2s var(--trans-spring);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        .toggle-switch.active::after { transform: translateX(20px); }
+        .toggle-switch.active .toggle-knob { transform: translateX(20px); }
 
         /* --- Buttons --- */
         .btn {
@@ -256,9 +311,12 @@
             transition: transform 0.1s;
         }
         .btn:active { transform: scale(0.96); }
+        .btn-sm { height: 40px; padding: 0 16px; border-radius: 12px; font-size: 13px; }
         
         .btn-primary { background: var(--accent); color: var(--accent-inv); box-shadow: 0 8px 20px rgba(185, 28, 28, 0.2); }
         .btn-secondary { background: var(--bg-input); color: var(--text-primary); }
+        .btn-outline { border: 1px solid var(--border); color: var(--text-secondary); }
+        .btn-danger { background: var(--error-bg); color: var(--error); }
         
         /* Floating Action Button (FAB) */
         .fab {
@@ -271,10 +329,9 @@
         }
         .fab:active { transform: scale(0.9); }
 
-        /* --- Modals (Bottom Sheet) --- */
+        /* --- Modals (Bottom Sheet / Desktop Dialog) --- */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-            /* Z-Index increased to cover Scanner UI (which is 300) */
             z-index: 400; 
             display: none; opacity: 0; transition: opacity 0.2s;
             flex-direction: column; justify-content: flex-end;
@@ -284,9 +341,11 @@
         .modal {
             background: var(--bg-body); width: 100%; max-width: 600px; margin: 0 auto;
             border-radius: 32px 32px 0 0; padding: 24px; padding-bottom: calc(24px + var(--safe-bottom));
-            max-height: 90vh; overflow-y: auto;
+            max-height: 95vh; overflow-y: auto;
             transform: translateY(100%); transition: transform 0.3s var(--trans-ease);
             box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
+            border: 1px solid var(--border);
+            border-bottom: none;
         }
         .modal-overlay.active .modal { transform: translateY(0); }
 
@@ -294,6 +353,18 @@
             width: 48px; height: 6px; background: var(--border); border-radius: 10px;
             margin: 0 auto 24px auto; opacity: 0.6;
         }
+
+        /* --- Tabs in Event View --- */
+        .tab-nav {
+            display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+        }
+        .tab-item {
+            flex: 1; text-align: center; padding: 12px 0;
+            font-size: 14px; font-weight: 600; color: var(--text-tertiary);
+            border-bottom: 2px solid transparent; transition: all 0.2s;
+            cursor: pointer;
+        }
+        .tab-item.active { color: var(--text-primary); border-bottom-color: var(--accent); }
 
         /* --- Scanner UI --- */
         #scanner-ui {
@@ -328,11 +399,12 @@
 
         .result-card {
             position: absolute; bottom: 40px; left: 20px; right: 20px;
-            background: #fff; border-radius: 24px; padding: 24px;
+            background: var(--bg-body); border-radius: 24px; padding: 24px;
             text-align: center; transform: translateY(150%); transition: transform 0.4s var(--trans-spring);
             display: flex; flex-direction: column; align-items: center; gap: 8px;
             z-index: 310; pointer-events: auto;
             box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
         }
         .result-card.show { transform: translateY(0); }
 
@@ -356,14 +428,6 @@
         .upload-zone:active { background: var(--bg-input); border-color: var(--text-tertiary); }
         .upload-zone img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
 
-        /* --- Demo Mode QR --- */
-        .demo-qr-container {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 30px; background: #fff; border-radius: 20px; margin-top: 20px;
-            border: 1px solid var(--border);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        }
-
         /* --- Manual Code Input UI --- */
         .tab-switcher {
             display: flex; padding: 4px; background: var(--bg-input); border-radius: 12px; margin-bottom: 24px;
@@ -372,7 +436,7 @@
             flex: 1; padding: 10px; text-align: center; font-size: 14px; font-weight: 600; color: var(--text-secondary);
             border-radius: 10px; transition: all 0.2s;
         }
-        .tab-btn.active { background: #fff; color: var(--text-primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .tab-btn.active { background: var(--bg-card); color: var(--text-primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
         .code-input-display {
             font-size: 32px; letter-spacing: 0.15em; font-weight: 700; text-align: center;
@@ -390,7 +454,7 @@
             font-size: 20px; font-weight: 600; color: var(--text-primary);
             display: flex; align-items: center; justify-content: center;
         }
-        .num-btn:active { background: #e5e7eb; }
+        .num-btn:active { background: var(--border); }
 
         @keyframes shake {
             10%, 90% { transform: translate3d(-1px, 0, 0); }
@@ -407,12 +471,410 @@
         .chip {
             padding: 8px 16px; border-radius: 20px; background: var(--bg-input); 
             color: var(--text-secondary); font-size: 12px; font-weight: 600; white-space: nowrap;
+            cursor: pointer;
         }
-        .chip.active { background: var(--text-primary); color: white; }
+        .chip.active { background: var(--text-primary); color: var(--bg-body); }
 
+        /* -----------------------
+           DESKTOP / PC STYLES
+           ----------------------- */
+        @media (min-width: 1024px) {
+            /* Layout: Side-by-side */
+            body { 
+                flex-direction: row; 
+            }
+            
+            /* Sidebar Navigation */
+            .nav-container {
+                position: sticky;
+                top: 0;
+                width: 280px;
+                height: 100vh;
+                border-top: none;
+                border-right: 1px solid var(--border);
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                padding: 40px 24px;
+                gap: 16px;
+                background: var(--bg-body);
+                z-index: 50;
+            }
+            
+            .nav-item {
+                flex-direction: row;
+                justify-content: flex-start;
+                padding: 16px;
+                border-radius: 12px;
+                gap: 12px;
+            }
+            
+            .nav-item.active { background: var(--bg-input); }
+            .nav-item span { font-size: 15px; font-weight: 600; margin-top: 0; }
+            .nav-icon-box { background: transparent !important; color: inherit; width: 24px; height: 24px; }
+            .nav-item.active .nav-icon-box { color: var(--accent); transform: none; }
+
+            /* Content Shell */
+            .app-shell {
+                flex: 1;
+                padding: 40px 60px;
+                max-width: 1400px;
+                margin: 0 auto;
+                padding-bottom: 60px;
+                height: 100vh;
+            }
+
+            /* Responsive Grid for Cards */
+            .list-container {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+                gap: 20px;
+            }
+            /* Override for feed items */
+            #activity-feed.list-container { display: flex; flex-direction: column; }
+            /* Override for guest list */
+            #guests-list.list-container { display: flex; flex-direction: column; }
+
+            /* Modals as Centered Dialogs */
+            .modal-overlay { align-items: center; justify-content: center; }
+            .modal {
+                transform: translateY(0) !important;
+                width: 500px;
+                max-width: 90%;
+                border-radius: 24px;
+                max-height: 85vh;
+                border-bottom: 1px solid var(--border);
+                position: relative;
+            }
+            /* Fix for Full-Height Create Sheet on Desktop */
+            #modal-create .modal {
+                height: 80vh;
+                max-height: 800px;
+                width: 600px;
+            }
+
+            .modal-handle { display: none; }
+
+            /* Floating Action Button Placement */
+            .fab {
+                right: 40px;
+                bottom: 40px;
+            }
+            
+            /* Profile Page Layout on Desktop */
+            #view-profile .card {
+                flex-direction: row;
+                text-align: left;
+                padding: 32px;
+            }
+        }
     </style>
 </head>
 <body>
+
+    <!-- NAV (Sidebar on Desktop, Bottom on Mobile) -->
+    <nav class="nav-container">
+        <!-- Desktop Logo (Hidden on Mobile) -->
+        <div style="display:none; margin-bottom:32px; padding:0 12px; align-items:center; gap:12px;" id="desktop-brand">
+            <div style="width:36px; height:36px; background:var(--accent); border-radius:10px; display:flex; align-items:center; justify-content:center; color:white; font-weight:700;">G</div>
+            <div style="font-weight:700; font-size:18px;">GigByCity</div>
+        </div>
+        <script>
+            if(window.innerWidth >= 1024) document.getElementById('desktop-brand').style.display = 'flex';
+        </script>
+
+        <div class="nav-item active" onclick="app.vibrate(); app.nav('dashboard')">
+            <div class="nav-icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
+            </div>
+            <span>Home</span>
+        </div>
+        <div class="nav-item" onclick="app.vibrate(); app.nav('events')">
+            <div class="nav-icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            </div>
+            <span>Events</span>
+        </div>
+        <div class="nav-item" onclick="app.vibrate(); app.initScanFlow()">
+            <div class="nav-icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
+            </div>
+            <span>Scan</span>
+        </div>
+        <div class="nav-item" onclick="app.vibrate(); app.nav('profile')">
+             <div class="nav-icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+             </div>
+            <span>Profile</span>
+        </div>
+    </nav>
+
+    <!-- MAIN APP CONTENT -->
+    <main class="app-shell">
+        
+        <!-- DASHBOARD -->
+        <section id="view-dashboard" class="active">
+            <div class="header">
+                <div>
+                    <div class="text-sm" style="color:var(--accent); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:4px;">GigByCity</div>
+                    <div class="h1">Host Dashboard</div>
+                </div>
+                <div class="avatar" style="border-radius:50%; width:44px; height:44px; font-size:14px; background:var(--text-primary); color:var(--bg-body); cursor:pointer;" onclick="app.nav('profile')">GB</div>
+            </div>
+
+            <!-- Financial Pulse -->
+            <div class="card" style="margin-bottom:24px; background: linear-gradient(135deg, #1f1f1f 0%, #000 100%); color: white; border:none;">
+                <div style="opacity: 0.7; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Wallet Balance</div>
+                <div class="h1" id="wallet-balance" style="color:white; font-size: 36px; margin-bottom: 20px;">$0.00</div>
+                
+                <div style="display: flex; gap: 12px;">
+                     <button onclick="app.exportDashboardCSV()" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; flex: 1; display:flex; align-items:center; justify-content:center; gap:6px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        Export Sheets
+                     </button>
+                     <button onclick="app.nav('events')" class="btn btn-sm" style="background: var(--accent); color: white; flex: 1;">Create Event</button>
+                </div>
+            </div>
+
+            <div class="h3" style="margin:24px 0 16px;">Performance</div>
+            
+            <div class="stat-grid-3">
+                <div class="stat-box">
+                    <div class="stat-label">Total Rev</div>
+                    <div class="stat-val" id="dash-revenue">$0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Tickets</div>
+                    <div class="stat-val" id="dash-tickets">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Events</div>
+                    <div class="stat-val" id="dash-events">0</div>
+                </div>
+            </div>
+
+            <div class="h3" style="margin:24px 0 16px;">Recent Activity</div>
+            <div id="activity-feed" class="list-container">
+                <!-- Feed items injected here -->
+            </div>
+
+            <div class="brand-footer">Made by KENBRISELLERIS</div>
+        </section>
+
+        <!-- EVENTS -->
+        <section id="view-events">
+            <div class="header">
+                <div class="h1">My Events</div>
+                <button class="btn btn-primary btn-sm" onclick="app.openModal('create')" style="display:none; align-items:center; gap:6px;" id="desktop-create-btn">
+                    <svg width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    New Event
+                </button>
+                <script>if(window.innerWidth>=1024) document.getElementById('desktop-create-btn').style.display='flex';</script>
+            </div>
+            <div id="events-list" class="list-container">
+                <!-- Events injected here -->
+            </div>
+            <div style="height: 60px;"></div>
+        </section>
+
+        <!-- EVENT DETAIL VIEW -->
+        <section id="view-event-detail">
+            <!-- Header -->
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                <button onclick="app.vibrate(); app.nav('events')" style="width:40px; height:40px; border-radius:12px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--text-primary);">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <div style="flex:1;">
+                    <div class="h2" id="detail-header" style="font-size:18px; line-height:1.2;">Event Name</div>
+                    <div class="text-sm" id="detail-subheader" style="color:var(--text-secondary); display:flex; gap:6px; align-items:center;">
+                         <span id="detail-status-badge" style="font-size:10px; font-weight:700; text-transform:uppercase; padding:2px 6px; border-radius:4px; background:var(--text-tertiary); color:white;">DRAFT</span>
+                         <span id="detail-genre" style="font-weight:600; color:var(--text-primary);">Genre</span>
+                         <span>•</span>
+                         <span id="detail-date">Date</span>
+                    </div>
+                </div>
+                <button onclick="app.startScannerForEvent(app.data.activeEventId)" style="width:40px; height:40px; background:var(--text-primary); border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--bg-body);">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tab-nav">
+                <div class="tab-item active" onclick="app.switchTab('overview')">Pulse</div>
+                <div class="tab-item" onclick="app.switchTab('guests')">Guests</div>
+                <div class="tab-item" onclick="app.switchTab('settings')">Controls</div>
+            </div>
+
+            <!-- TAB: OVERVIEW (PULSE) -->
+            <div id="tab-overview">
+                <!-- Sales Pulse -->
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <div class="text-sm" style="font-weight:600;">Ticket Sales</div>
+                        <div class="text-xs" style="color:var(--text-secondary);"><span id="pulse-sold">0</span> / <span id="pulse-cap">100</span></div>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="pulse-bar-sales"></div>
+                    </div>
+                    <div style="margin-top:16px; display:flex; justify-content:space-between;">
+                        <div>
+                            <div class="text-xs" style="color:var(--text-tertiary); text-transform:uppercase;">Revenue</div>
+                            <div class="h2" style="color:var(--accent);" id="pulse-revenue">$0</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div class="text-xs" style="color:var(--text-tertiary); text-transform:uppercase;">Price</div>
+                            <div class="h2" id="pulse-price">$0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Check-in Pulse -->
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <div class="text-sm" style="font-weight:600;">Arrivals</div>
+                        <div class="text-xs" style="color:var(--text-secondary);"><span id="pulse-in">0</span> Checked In</div>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" style="background:var(--success);" id="pulse-bar-checkin"></div>
+                    </div>
+                     <div style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div style="background:var(--bg-subtle); padding:12px; border-radius:8px; text-align:center;">
+                            <div class="h2" style="color:var(--success);" id="pulse-in-count">0</div>
+                            <div class="text-xs">Here</div>
+                        </div>
+                        <div style="background:var(--bg-subtle); padding:12px; border-radius:8px; text-align:center;">
+                            <div class="h2" style="color:var(--warn);" id="pulse-pending-count">0</div>
+                            <div class="text-xs">Pending</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: GUESTS -->
+            <div id="tab-guests" style="display:none;">
+                <div class="filter-chips">
+                    <div class="chip active" onclick="app.filterGuestsByStatus('all', this)">All</div>
+                    <div class="chip" onclick="app.filterGuestsByStatus('pending', this)">Pending</div>
+                    <div class="chip" onclick="app.filterGuestsByStatus('checked-in', this)">Checked In</div>
+                </div>
+
+                <div style="margin-bottom:16px; display:flex; gap:12px;">
+                    <div style="position:relative; flex:1;">
+                        <div style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-tertiary);">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </div>
+                        <input type="text" class="input" style="height:44px; padding-left:40px; font-size:14px;" placeholder="Search..." onkeyup="app.filterGuests(this.value)">
+                    </div>
+                    <button class="btn btn-outline btn-sm" style="height:44px;" onclick="app.exportGuestListCSV()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </button>
+                </div>
+
+                <div id="guests-list" class="list-container">
+                    <!-- Guest list items injected here -->
+                </div>
+                <div style="height: 60px;"></div>
+            </div>
+
+            <!-- TAB: SETTINGS -->
+            <div id="tab-settings" style="display:none;">
+                <div class="card">
+                    <div class="h3" style="margin-bottom:16px;">Event Status</div>
+                    <div class="input-group">
+                        <select id="setting-status" class="input" onchange="app.updateEventSettings()">
+                            <option value="draft">Draft (Hidden)</option>
+                            <option value="live">Live (Selling)</option>
+                            <option value="sold-out">Sold Out</option>
+                        </select>
+                    </div>
+                    <p class="text-xs" style="margin-top:-10px;">Controls visibility in the public feed.</p>
+                </div>
+
+                <div class="card">
+                    <div class="h3" style="margin-bottom:16px;">Ticket Controls</div>
+                    <div class="input-group">
+                        <label class="label">Total Capacity</label>
+                        <input type="number" id="setting-capacity" class="input" onchange="app.updateEventSettings()">
+                    </div>
+                    <div class="input-group">
+                        <label class="label">Ticket Price ($)</label>
+                        <input type="number" id="setting-price" class="input" onchange="app.updateEventSettings()">
+                    </div>
+                    <button class="btn btn-primary" style="width:100%;" onclick="app.updateEventSettings(); alert('Settings Saved')">Update Settings</button>
+                </div>
+
+                 <div class="card" style="border-color:var(--error-bg);">
+                    <div class="h3" style="color:var(--error); margin-bottom:12px;">Danger Zone</div>
+                    <button class="btn btn-danger btn-sm" style="width:100%;" onclick="if(confirm('Delete this event?')) { app.deleteEvent(); }">Delete Event</button>
+                </div>
+                <div style="height: 60px;"></div>
+            </div>
+        </section>
+
+        <!-- PROFILE -->
+        <section id="view-profile">
+            <div class="header">
+                <div class="h1">Profile</div>
+            </div>
+
+            <div class="card" style="display:flex; align-items:center; gap:20px; margin-bottom:32px;">
+                <div class="avatar" style="background:var(--accent); color:white; width:64px; height:64px; font-size:24px;">GB</div>
+                <div>
+                    <div class="h3" style="font-size:18px;" id="profile-name">GigByCity Host</div>
+                    <div class="text-xs" style="color:var(--text-secondary); margin-bottom:2px;" id="profile-org">City Vibes Events</div>
+                    <div class="text-sm" id="profile-email">pro@gigbycity.com</div>
+                    <div style="display:inline-block; margin-top:6px; background:var(--accent-light); color:var(--accent); font-size:10px; font-weight:700; padding:4px 8px; border-radius:6px; letter-spacing:0.05em;">PRO ACCOUNT</div>
+                </div>
+            </div>
+
+            <!-- General Settings -->
+            <div class="h3" style="margin-bottom:16px;">Settings</div>
+            <div class="list-container" style="margin-bottom:24px;">
+                <div class="list-item">
+                    <div style="flex:1; font-weight:600;">Dark Mode</div>
+                    <div class="toggle-switch" onclick="app.toggleDarkMode()" id="btn-dark-mode">
+                         <div class="toggle-knob"></div>
+                    </div>
+                </div>
+                <button class="list-item" onclick="app.openModal('edit-profile')">
+                    <div style="flex:1; text-align:left; font-weight:600;">Edit Details</div>
+                </button>
+            </div>
+
+            <!-- Support -->
+            <div class="h3" style="margin-bottom:16px;">General</div>
+            <div class="list-container">
+                <button class="list-item" onclick="app.openModal('about')">
+                    <div style="flex:1; text-align:left; font-weight:600;">About Company</div>
+                    <div style="color:var(--text-tertiary);">→</div>
+                </button>
+                <a href="mailto:kenbriselleris.contact@gmail.com" class="list-item" style="text-decoration:none; color:var(--text-primary);">
+                    <div style="width:40px; height:40px; border-radius:12px; background:var(--bg-input); display:flex; align-items:center; justify-content:center;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    </div>
+                    <div style="flex:1; text-align:left;">
+                        <div style="font-weight:600;">Customer Support</div>
+                        <div class="text-xs" style="color:var(--text-secondary);">kenbriselleris.contact@gmail.com</div>
+                    </div>
+                    <div style="color:var(--text-tertiary);">→</div>
+                </a>
+                <button class="list-item" style="color:var(--error);" onclick="alert('Signed out')">
+                    <div style="width:40px; height:40px; border-radius:12px; background:var(--error-bg); display:flex; align-items:center; justify-content:center;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    </div>
+                    <div style="flex:1; text-align:left; font-weight:600;">Sign Out</div>
+                </button>
+            </div>
+            
+            <div style="height: 60px;"></div>
+        </section>
+
+    </main>
+
+    <!-- FAB -->
+    <button class="fab" onclick="app.vibrate(); app.openModal('create')">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </button>
 
     <!-- SCANNER (Full Screen) -->
     <div id="scanner-ui">
@@ -452,240 +914,6 @@
         </div>
     </div>
 
-    <!-- MAIN APP CONTENT -->
-    <main class="app-shell">
-        
-        <!-- DASHBOARD -->
-        <section id="view-dashboard" class="active">
-            <div class="header">
-                <div>
-                    <div class="text-sm" style="color:var(--accent); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:4px;">GigByCity</div>
-                    <div class="h1">Overview</div>
-                </div>
-                <div class="avatar" style="border-radius:50%; width:44px; height:44px; font-size:14px; background:var(--text-primary); color:white; cursor:pointer;" onclick="app.nav('profile')">GB</div>
-            </div>
-
-            <div class="card" style="margin-bottom:32px;">
-                <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-                    <div>
-                        <div class="text-xs" style="text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary);">Total Revenue</div>
-                        <div class="h1" id="dash-revenue" style="color:var(--accent); margin-top:4px;">$0</div>
-                    </div>
-                    <div style="text-align:right;">
-                         <div class="text-xs" style="text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary);">Tickets Sold</div>
-                         <div class="h2" id="dash-tickets" style="color:var(--text-primary);">0</div>
-                    </div>
-                </div>
-                <!-- Mini Chart -->
-                <div class="chart-container">
-                    <div class="chart-bar" style="height:30%"></div>
-                    <div class="chart-bar" style="height:50%"></div>
-                    <div class="chart-bar" style="height:40%"></div>
-                    <div class="chart-bar" style="height:70%"></div>
-                    <div class="chart-bar" style="height:55%"></div>
-                    <div class="chart-bar active" style="height:90%"></div>
-                    <div class="chart-bar" style="height:20%"></div>
-                </div>
-                <div class="text-xs" style="text-align:center; color:var(--text-tertiary); margin-top:8px;">Weekly Sales Trend</div>
-            </div>
-
-            <div class="h3" style="margin:24px 0 16px;">Recent Activity</div>
-            <div id="activity-feed" class="list-container">
-                <!-- Feed items injected here -->
-            </div>
-
-            <div class="brand-footer">Made by KENBRISELLERIS</div>
-        </section>
-
-        <!-- EVENTS -->
-        <section id="view-events">
-            <div class="header">
-                <div class="h1">My Events</div>
-            </div>
-            <div id="events-list" class="list-container" style="gap:24px;">
-                <!-- Events injected here with new aesthetic -->
-            </div>
-        </section>
-
-        <!-- GUESTS / EVENT DETAIL VIEW -->
-        <section id="view-guests">
-            <!-- New Header with Back Button -->
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
-                <button onclick="app.vibrate(); app.nav('events')" style="width:40px; height:40px; border-radius:12px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--text-primary);">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                </button>
-                <div style="flex:1;">
-                    <div class="h2" id="guest-header" style="font-size:20px; line-height:1.2;">Event Name</div>
-                    <div class="text-sm" id="guest-subheader" style="color:var(--text-secondary);">Date • Time</div>
-                </div>
-            </div>
-
-            <!-- Stats Overview Card -->
-            <div class="card" style="padding:20px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; text-align:center;">
-                <div>
-                    <div class="h2" id="stat-total">0</div>
-                    <div class="text-xs" style="color:var(--text-secondary); margin-top:4px;">Joined</div>
-                </div>
-                <div style="border-left:1px solid var(--border); border-right:1px solid var(--border);">
-                    <div class="h2" id="stat-in" style="color:var(--success);">0</div>
-                    <div class="text-xs" style="color:var(--text-secondary); margin-top:4px;">Checked In</div>
-                </div>
-                <div>
-                    <div class="h2" id="stat-pending" style="color:var(--warn);">0</div>
-                    <div class="text-xs" style="color:var(--text-secondary); margin-top:4px;">Pending</div>
-                </div>
-            </div>
-            
-            <div class="h3" style="margin-bottom:12px;">Guest List</div>
-
-            <div class="filter-chips">
-                <div class="chip active" onclick="app.filterGuestsByStatus('all', this)">All</div>
-                <div class="chip" onclick="app.filterGuestsByStatus('pending', this)">Pending</div>
-                <div class="chip" onclick="app.filterGuestsByStatus('checked-in', this)">Checked In</div>
-            </div>
-
-            <div style="margin-bottom:20px; position:sticky; top:0; z-index:10; background:var(--bg-body); padding:10px 0;">
-                <div style="position:relative;">
-                    <div style="position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--text-tertiary);">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    </div>
-                    <input type="text" class="input" style="padding-left:48px;" placeholder="Search guest name..." onkeyup="app.filterGuests(this.value)">
-                </div>
-            </div>
-
-            <div id="guests-list" class="list-container"></div>
-        </section>
-
-        <!-- PROFILE -->
-        <section id="view-profile">
-            <div class="header">
-                <div class="h1">Profile</div>
-            </div>
-
-            <div class="card" style="display:flex; align-items:center; gap:20px; margin-bottom:32px;">
-                <div class="avatar" style="background:var(--accent); color:white; width:64px; height:64px; font-size:24px;">GB</div>
-                <div>
-                    <div class="h3" style="font-size:18px;" id="profile-name">GigByCity Host</div>
-                    <div class="text-sm" id="profile-email">pro@gigbycity.com</div>
-                    <div style="display:inline-block; margin-top:6px; background:var(--accent-light); color:var(--accent); font-size:10px; font-weight:700; padding:4px 8px; border-radius:6px; letter-spacing:0.05em;">PRO ACCOUNT</div>
-                </div>
-            </div>
-
-            <!-- Host Details Section -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <div class="h3">Host Details</div>
-                <button class="text-sm" style="color:var(--accent); font-weight:600;" onclick="app.openModal('edit-profile')">Edit</button>
-            </div>
-            
-            <div class="list-container" style="margin-bottom:32px;">
-                <div class="list-item">
-                    <div style="width:40px; height:40px; border-radius:12px; background:var(--bg-input); display:flex; align-items:center; justify-content:center; color:var(--text-primary);">
-                         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l8-4 8 4v14M8 21v-4h8v4"/></svg>
-                    </div>
-                    <div>
-                        <div class="text-xs" style="color:var(--text-secondary);">Organization</div>
-                        <div style="font-weight:600;" id="profile-org">City Vibes Events</div>
-                    </div>
-                </div>
-                <div class="list-item">
-                     <div style="width:40px; height:40px; border-radius:12px; background:var(--bg-input); display:flex; align-items:center; justify-content:center; color:var(--text-primary);">
-                         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                    </div>
-                    <div>
-                        <div class="text-xs" style="color:var(--text-secondary);">Contact</div>
-                        <div style="font-weight:600;" id="profile-phone">+1 (555) 012-3456</div>
-                    </div>
-                </div>
-                 <div class="list-item">
-                     <div style="width:40px; height:40px; border-radius:12px; background:var(--bg-input); display:flex; align-items:center; justify-content:center; color:var(--text-primary);">
-                         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                    </div>
-                    <div>
-                        <div class="text-xs" style="color:var(--text-secondary);">Member Since</div>
-                        <div style="font-weight:600;" id="profile-joined">August 2024</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- General -->
-            <div class="h3" style="margin-bottom:16px;">General</div>
-            <div class="list-container">
-                <button class="list-item" onclick="app.openModal('about-company')">
-                    <div style="width:40px; height:40px; border-radius:12px; background:var(--bg-input); display:flex; align-items:center; justify-content:center; color:var(--text-primary);">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                    </div>
-                    <div style="flex:1; text-align:left; font-weight:600;">About Company</div>
-                    <div style="color:var(--text-tertiary);">→</div>
-                </button>
-                <button class="list-item" style="color:var(--error);" onclick="alert('Signed out')">
-                    <div style="width:40px; height:40px; border-radius:12px; background:var(--error-bg); display:flex; align-items:center; justify-content:center;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                    </div>
-                    <div style="flex:1; text-align:left; font-weight:600;">Sign Out</div>
-                </button>
-            </div>
-
-            <div class="brand-footer">Made by KENBRISELLERIS</div>
-        </section>
-
-    </main>
-
-    <!-- FAB -->
-    <button class="fab" onclick="app.vibrate(); app.openModal('create')">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-    </button>
-
-    <!-- NAV -->
-    <nav class="nav-container">
-        <div class="nav-item active" onclick="app.vibrate(); app.nav('dashboard')">
-            <div class="nav-icon-box">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
-            </div>
-            <span>Home</span>
-        </div>
-        <div class="nav-item" onclick="app.vibrate(); app.nav('events')">
-            <div class="nav-icon-box">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            </div>
-            <span>Events</span>
-        </div>
-        <!-- Scan Button (Center-ish) -->
-        <div class="nav-item" onclick="app.vibrate(); app.initScanFlow()">
-            <div class="nav-icon-box" style="background:var(--text-primary); color:white; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
-            </div>
-            <span style="margin-top:2px;">Scan</span>
-        </div>
-        <div class="nav-item" onclick="app.vibrate(); app.nav('profile')">
-             <div class="nav-icon-box">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-             </div>
-            <span>Profile</span>
-        </div>
-    </nav>
-
-    <!-- ABOUT COMPANY MODAL -->
-    <div class="modal-overlay" id="modal-about-company">
-        <div class="modal">
-            <div class="modal-handle"></div>
-            <div style="text-align:center;">
-                <div style="width:80px; height:80px; background:var(--text-primary); border-radius:24px; color:white; font-size:28px; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 20px auto;">K</div>
-                <h2 class="h2" style="margin-bottom:8px;">KENBRISELLERIS</h2>
-                <div class="text-sm" style="color:var(--text-secondary); margin-bottom:24px;">Innovating Event Experiences</div>
-            </div>
-            
-            <div style="background:var(--bg-subtle); padding:20px; border-radius:16px; margin-bottom:24px;">
-                <p class="text-sm" style="margin-bottom:12px;">We build tools for the modern creator. GigByCity is our flagship solution for seamless event management.</p>
-                <div style="display:flex; justify-content:space-between; margin-top:16px;">
-                    <div class="text-xs" style="color:var(--text-tertiary);">Version</div>
-                    <div class="text-xs font-semibold">2.4.0 (Pro)</div>
-                </div>
-            </div>
-
-            <button class="btn btn-secondary" style="width:100%;" onclick="app.closeModal('about-company')">Close</button>
-        </div>
-    </div>
-
     <!-- EDIT PROFILE MODAL -->
     <div class="modal-overlay" id="modal-edit-profile">
         <div class="modal">
@@ -697,89 +925,130 @@
                     <input type="text" id="edit-name" class="input" required>
                 </div>
                 <div class="input-group">
+                    <label class="label">Email Address</label>
+                    <input type="email" id="edit-email" class="input" required>
+                </div>
+                <div class="input-group">
                     <label class="label">Organization</label>
                     <input type="text" id="edit-org" class="input" required>
                 </div>
-                <div class="input-group">
-                    <label class="label">Contact Phone</label>
-                    <input type="tel" id="edit-phone" class="input" required>
-                </div>
-                <div class="input-group">
-                    <label class="label">Email (Read Only)</label>
-                    <input type="email" id="edit-email" class="input" readonly style="opacity:0.7;">
-                </div>
                 <button type="submit" class="btn btn-primary" style="width:100%; margin-top:12px;">Save Changes</button>
                 <button type="button" class="btn btn-secondary" style="width:100%; margin-top:12px;" onclick="app.closeModal('edit-profile')">Cancel</button>
-                <div style="height:40px;"></div>
             </form>
+        </div>
+    </div>
+
+    <!-- ABOUT MODAL -->
+    <div class="modal-overlay" id="modal-about">
+        <div class="modal">
+            <div class="modal-handle"></div>
+            <div style="text-align:center; padding-bottom:20px;">
+                <div style="width:60px; height:60px; background:var(--accent); border-radius:18px; color:white; font-size:24px; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto; box-shadow:0 8px 20px rgba(185,28,28,0.3);">
+                    G
+                </div>
+                <h2 class="h2">GigByCity</h2>
+                <div class="text-sm" style="color:var(--text-secondary); margin-top:4px;">Version 6.0.0</div>
+            </div>
+            
+            <div style="background:var(--bg-subtle); border-radius:16px; padding:20px; margin-bottom:24px;">
+                <div class="h3" style="margin-bottom:8px;">About Us</div>
+                <p class="text-sm" style="color:var(--text-secondary); margin-bottom:16px;">
+                    GigByCity is the premier event management platform for creators, organizers, and venues. We simplify check-ins, sales tracking, and guest management so you can focus on the experience.
+                </p>
+                <div style="font-size:12px; color:var(--text-tertiary);">
+                    © 2026 Kenbriselleris Inc.<br>All rights reserved.
+                </div>
+            </div>
+            
+            <button class="btn btn-secondary" style="width:100%;" onclick="app.closeModal('about')">Close</button>
         </div>
     </div>
 
     <!-- CREATE EVENT SHEET -->
     <div class="modal-overlay" id="modal-create">
-        <div class="modal">
-            <div class="modal-handle"></div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-                <h2 class="h2">Create Event</h2>
-                <button class="text-sm font-semibold" style="color:var(--text-secondary);" onclick="app.closeModal('create')">Cancel</button>
+        <div class="modal" style="padding:0; border-radius:32px 32px 0 0; overflow:hidden; height:95vh; max-height:95vh; display:flex; flex-direction:column;">
+            <!-- Sticky Header -->
+            <div style="padding:16px 24px; background:var(--bg-body); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+                <h2 class="h2" style="font-size:20px;">New Event</h2>
+                <button class="text-sm font-semibold" style="color:var(--text-secondary); padding:8px;" onclick="app.closeModal('create')">Cancel</button>
             </div>
             
-            <form onsubmit="app.createEvent(event)">
-                <!-- Image Upload -->
-                <div class="input-group">
-                    <label class="label">Event Poster</label>
-                    <div class="upload-zone" onclick="document.getElementById('file-input').click()">
-                        <img id="preview-img" style="display:none;">
-                        <div id="upload-placeholder" style="text-align:center;">
-                            <div style="width:48px; height:48px; background:white; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
-                                <svg style="color:var(--text-primary);" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <!-- Scrollable Content -->
+            <div style="overflow-y:auto; padding:24px; flex:1; -webkit-overflow-scrolling: touch;">
+                <form id="create-form" onsubmit="app.createEvent(event)" style="display:flex; flex-direction:column; gap:24px;">
+                    <!-- Image Upload (Banner Style) -->
+                    <div class="upload-zone" onclick="document.getElementById('file-input').click()" style="width:100%; aspect-ratio:16/9; border-radius:20px; border:1px dashed var(--border); background:var(--bg-subtle); position:relative; overflow:hidden; transition:all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                        <img id="preview-img" style="display:none; width:100%; height:100%; object-fit:cover;">
+                        <div id="upload-placeholder" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+                            <div style="width:56px; height:56px; background:var(--bg-input); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:12px; color:var(--text-primary); transition: transform 0.2s;">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                             </div>
-                            <div class="text-sm font-semibold" style="color:var(--text-primary);">Upload Photo</div>
-                            <div class="text-xs" style="margin-top:2px;">Tap to browse gallery</div>
+                            <div class="text-sm font-semibold" style="color:var(--text-primary);">Add Cover Photo</div>
+                            <div class="text-xs" style="color:var(--text-tertiary); margin-top:4px;">16:9 Aspect Ratio</div>
                         </div>
                     </div>
                     <input type="file" id="file-input" hidden accept="image/*" onchange="app.handleImage(event)">
                     <input type="hidden" id="final-img-data">
-                </div>
 
-                <!-- Basic Info -->
-                <div class="input-group">
-                    <label class="label">Event Title</label>
-                    <input type="text" id="inp-title" class="input" placeholder="e.g. Summer Music Festival" required>
-                </div>
-
-                <div class="input-group">
-                    <label class="label">Description</label>
-                    <textarea id="inp-desc" class="input" placeholder="What is this event about?"></textarea>
-                </div>
-
-                <!-- Location -->
-                <div class="input-group">
-                    <label class="label">Location (Place)</label>
-                    <input type="text" id="inp-loc" class="input" placeholder="e.g. Central Park, NY">
-                </div>
-
-                <!-- Date & Time Grid -->
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
-                    <div class="input-group">
-                        <label class="label">Date</label>
-                        <input type="date" id="inp-date" class="input" required>
+                    <!-- Title Input -->
+                    <div class="input-group" style="margin:0;">
+                        <input type="text" id="inp-title" class="input" style="font-weight:700; font-size:26px; border:none; border-bottom:1px solid var(--border); background:transparent; padding:12px 0; height:auto; border-radius:0; line-height: 1.3;" placeholder="Event Name" required>
                     </div>
-                    <div class="input-group">
-                        <label class="label">Time</label>
-                        <input type="time" id="inp-time" class="input" required>
+
+                    <!-- Genre Input -->
+                    <div class="input-group input-with-icon" style="margin:0;">
+                        <div class="input-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                        </div>
+                        <input type="text" id="inp-genre" class="input" placeholder="Category (e.g. Jazz, Workshop)" required>
                     </div>
-                </div>
 
-                <!-- Fee -->
-                <div class="input-group">
-                    <label class="label">Entry Fee ($)</label>
-                    <input type="number" id="inp-price" class="input" placeholder="0">
-                </div>
+                    <!-- Location with Icon -->
+                    <div class="input-group input-with-icon" style="margin:0;">
+                        <div class="input-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        </div>
+                        <input type="text" id="inp-loc" class="input" placeholder="Location or Venue" required>
+                    </div>
 
-                <button type="submit" class="btn btn-primary" style="width:100%; margin-top:12px;">Publish Event</button>
-                <div style="height:40px;"></div><!-- Spacer for bottom safe area -->
-            </form>
+                    <!-- Date & Time Grid -->
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                        <div class="input-group input-with-icon" style="margin:0;">
+                            <div class="input-icon">
+                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            </div>
+                            <input type="date" id="inp-date" class="input" required style="padding-right:0;">
+                        </div>
+                        <div class="input-group input-with-icon" style="margin:0;">
+                            <div class="input-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            </div>
+                            <input type="time" id="inp-time" class="input" required style="padding-right:0;">
+                        </div>
+                    </div>
+
+                    <!-- Capacity & Price Grid -->
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                        <div class="input-group input-with-icon" style="margin:0;">
+                            <div class="input-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            </div>
+                            <input type="number" id="inp-capacity" class="input" placeholder="Capacity" required>
+                        </div>
+                        <div class="input-group input-with-icon" style="margin:0;">
+                            <div class="input-icon" style="font-weight:700; font-size:18px;">$</div>
+                            <input type="number" id="inp-price" class="input" placeholder="Price" required>
+                        </div>
+                    </div>
+                    
+                    <div style="height:20px;"></div>
+                </form>
+            </div>
+
+            <!-- Sticky Footer Action -->
+            <div style="padding:16px 24px calc(16px + var(--safe-bottom)); background:var(--bg-body); border-top:1px solid var(--border); position:sticky; bottom:0; z-index:10;">
+                <button type="button" onclick="document.getElementById('create-form').dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}))" class="btn btn-primary" style="width:100%; height:56px; font-size:16px; border-radius:16px;">Publish Event</button>
+            </div>
         </div>
     </div>
 
@@ -789,13 +1058,8 @@
             <div class="modal-handle"></div>
             <div style="text-align:center; margin-bottom:24px;">
                 <h2 class="h2">Which event are you scanning?</h2>
-                <p class="text-sm" style="margin-top:8px;">Select the event to ensure you validate the correct tickets.</p>
             </div>
-            
-            <div id="scan-select-list" class="list-container">
-                <!-- Injected via JS -->
-            </div>
-            
+            <div id="scan-select-list" class="list-container"></div>
             <button class="btn btn-secondary" style="width:100%; margin-top:16px;" onclick="app.closeModal('scan-select')">Cancel</button>
         </div>
     </div>
@@ -805,8 +1069,7 @@
         <div class="modal">
             <div class="modal-handle"></div>
             <div style="text-align:center; margin-bottom:24px;">
-                <h2 class="h2">Backup Verification</h2>
-                <p class="text-sm" style="margin-top:4px;">Enter the guest's 6-digit security code</p>
+                <h2 class="h2">Manual Entry</h2>
             </div>
 
             <div class="tab-switcher">
@@ -814,10 +1077,8 @@
                 <div class="tab-btn" id="tab-btn-name" onclick="app.toggleManualMode('name')">By Name</div>
             </div>
 
-            <!-- MODE 1: CODE INPUT -->
             <div id="manual-mode-code">
                 <div class="code-input-display" id="code-display"></div>
-                
                 <div class="numpad">
                     <button class="num-btn" onclick="app.padInput(1)">1</button>
                     <button class="num-btn" onclick="app.padInput(2)">2</button>
@@ -828,13 +1089,12 @@
                     <button class="num-btn" onclick="app.padInput(7)">7</button>
                     <button class="num-btn" onclick="app.padInput(8)">8</button>
                     <button class="num-btn" onclick="app.padInput(9)">9</button>
-                    <button class="num-btn" onclick="app.padClear()" style="font-size:16px; color:var(--error);">Clear</button>
+                    <button class="num-btn" onclick="app.padClear()" style="font-size:16px; color:var(--error);">Clr</button>
                     <button class="num-btn" onclick="app.padInput(0)">0</button>
                     <button class="num-btn" onclick="app.padSubmit()" style="background:var(--accent); color:white;">Go</button>
                 </div>
             </div>
 
-            <!-- MODE 2: NAME SEARCH -->
             <div id="manual-mode-name" style="display:none;">
                 <div class="input-group">
                     <input type="text" class="input" id="manual-search-inp" placeholder="Type guest name..." onkeyup="app.searchGuestForCheckIn(this.value)">
@@ -848,11 +1108,24 @@
         </div>
     </div>
 
+    <!-- REFUND CONFIRMATION -->
+    <div class="modal-overlay" id="modal-guest-actions">
+        <div class="modal">
+            <div class="modal-handle"></div>
+            <div class="h2" id="action-guest-name" style="margin-bottom:4px;">Guest Name</div>
+            <div class="text-sm" id="action-guest-detail" style="color:var(--text-secondary); margin-bottom:24px;">Code: 123456</div>
+            
+            <button class="btn btn-danger" style="width:100%; margin-bottom:12px;" onclick="app.refundGuest()">Refund Ticket & Remove</button>
+            <button class="btn btn-secondary" style="width:100%;" onclick="app.closeModal('guest-actions')">Cancel</button>
+        </div>
+    </div>
+
     <!-- CROP SHEET -->
     <div class="modal-overlay" id="modal-crop" style="z-index:500;">
         <div class="modal">
             <div class="modal-handle"></div>
             <h2 class="h2" style="margin-bottom:16px;">Adjust Image</h2>
+            <!-- Changed background to slightly transparent to see context, but kept black for contrast -->
             <div style="height: 300px; background:#000; border-radius:var(--radius-md); overflow:hidden; margin-bottom:20px;">
                 <img id="crop-target" style="max-width:100%;">
             </div>
@@ -870,46 +1143,42 @@
                 profile: JSON.parse(localStorage.getItem('gbc_profile')) || {
                     name: 'GigByCity Host',
                     email: 'pro@gigbycity.com',
-                    org: 'City Vibes Events',
-                    phone: '+1 (555) 012-3456',
-                    joined: 'August 2024'
+                    org: 'City Vibes Events'
                 },
-                activeEventId: null,      // Currently viewing in Dashboard/Guests
-                scanningEventId: null,    // Specifically chosen for scanning
+                // Dark Mode: Load from local storage OR default to system preference
+                darkMode: (function() {
+                    const stored = localStorage.getItem('gbc_dark');
+                    if (stored !== null) return JSON.parse(stored);
+                    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                })(),
+                activeEventId: null,      
+                scanningEventId: null,
+                selectedGuestId: null,
                 manualCode: '',
                 currentFilter: 'all',
+                activeTab: 'overview'
             },
             
             scanner: null,
             cropper: null,
 
             init() {
-                if(this.data.events.length === 0) {
-                    this.data.events = [
-                        { 
-                            id: 'e1', 
-                            title: 'Summer Jazz Night', 
-                            date: '2026-08-15', 
-                            time: '19:00', 
-                            location: 'Blue Note Club', 
-                            price: 25, 
-                            image: 'https://images.unsplash.com/photo-1514525253440-b393452e3726?auto=format&fit=crop&w=400', 
-                            attendees: [
-                                {name: 'Alice Moore', id: 't1', code: '482109', status: 'pending'}, 
-                                {name: 'Bob Smith', id: 't2', code: '123456', status: 'checked-in'}
-                            ] 
-                        },
-                    ];
-                    this.save();
-                }
+                // Apply Dark Mode immediately
+                this.applyTheme();
+
+                // Migration: Ensure all events have capacity, status, and price
+                this.data.events.forEach(e => {
+                    if(!e.status) e.status = 'live';
+                    if(!e.capacity) e.capacity = 100;
+                    if(!e.price) e.price = 0;
+                });
+                
                 this.renderDashboard();
                 this.renderEvents();
                 this.renderProfile();
             },
 
-            vibrate() {
-                if (navigator.vibrate) navigator.vibrate(50);
-            },
+            vibrate() { if (navigator.vibrate) navigator.vibrate(50); },
 
             save() {
                 localStorage.setItem('gbc_events', JSON.stringify(this.data.events));
@@ -917,24 +1186,60 @@
                 this.renderDashboard();
             },
 
+            // --- THEME LOGIC ---
+            applyTheme() {
+                if (this.data.darkMode) {
+                    document.body.classList.add('dark-mode');
+                } else {
+                    document.body.classList.remove('dark-mode');
+                }
+                this.updateDarkModeToggle();
+            },
+
+            toggleDarkMode() {
+                this.vibrate();
+                this.data.darkMode = !this.data.darkMode;
+                localStorage.setItem('gbc_dark', this.data.darkMode);
+                this.applyTheme();
+            },
+
+            updateDarkModeToggle() {
+                const btn = document.getElementById('btn-dark-mode');
+                if(btn) {
+                    if(this.data.darkMode) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                }
+            },
+
             nav(view) {
                 this.vibrate();
                 document.querySelectorAll('section').forEach(el => el.classList.remove('active'));
-                document.getElementById('view-' + view).classList.add('active');
+                
+                // Special handling for event detail to maintain sub-view
+                if (view === 'event-detail') {
+                    document.getElementById('view-event-detail').classList.add('active');
+                } else {
+                    document.getElementById('view-' + view).classList.add('active');
+                }
                 
                 document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-                const map = { 'dashboard':0, 'events':1, 'guests':-1, 'profile':3 }; // Guest is hidden in nav
+                const map = { 'dashboard':0, 'events':1, 'profile':3 }; 
                 if (map[view] >= 0) document.querySelectorAll('.nav-item')[map[view]].classList.add('active');
 
                 if(view === 'events') this.renderEvents();
-                // Close scanner if navigating away via nav
+                if(view === 'profile') {
+                    this.renderProfile();
+                    this.updateDarkModeToggle(); // Ensure toggle state is correct when viewing profile
+                }
+                
+                // Clean up scanner
                 document.getElementById('scanner-ui').classList.remove('active');
                 if(this.scanner) { this.scanner.stop().then(()=>this.scanner.clear()); this.scanner=null; }
                 
                 window.scrollTo(0,0);
             },
 
-            // --- DASHBOARD ---
+            // --- DASHBOARD & FINANCIALS ---
             renderDashboard() {
                 let revenue = 0;
                 let sold = 0;
@@ -946,6 +1251,8 @@
 
                 document.getElementById('dash-revenue').textContent = '$' + revenue.toLocaleString();
                 document.getElementById('dash-tickets').textContent = sold.toLocaleString();
+                document.getElementById('dash-events').textContent = this.data.events.length;
+                document.getElementById('wallet-balance').textContent = '$' + revenue.toLocaleString() + '.00';
 
                 const feed = document.getElementById('activity-feed');
                 if(this.data.events.length > 0) {
@@ -956,45 +1263,47 @@
                                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                             </div>
                             <div>
-                                <div style="font-weight:600; font-size:15px;">New Ticket</div>
-                                <div class="text-xs">Sold for ${lastEvent.title}</div>
+                                <div style="font-weight:600; font-size:15px;">Revenue Update</div>
+                                <div class="text-xs">Ticket sales are active</div>
                             </div>
-                            <div class="text-xs" style="margin-left:auto;">2m ago</div>
+                            <div class="text-xs" style="margin-left:auto;">Now</div>
                         </div>
                     `;
                 }
             },
 
-            // --- EVENTS (UPDATED AESTHETICS) ---
+            // --- EVENTS LIST ---
             renderEvents() {
                 const container = document.getElementById('events-list');
-                container.innerHTML = this.data.events.map(e => `
+                if(this.data.events.length === 0) {
+                     container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-tertiary);">No events created yet.<br>Tap the + button to start.</div>`;
+                     return;
+                }
+
+                container.innerHTML = this.data.events.map(e => {
+                    const statusClass = e.status === 'live' ? 'status-live' : (e.status === 'sold-out' ? 'status-soldout' : 'status-draft');
+                    const statusText = e.status === 'sold-out' ? 'SOLD OUT' : e.status;
+                    const genre = e.genre || 'General';
+                    return `
                     <div class="event-card" onclick="app.vibrate(); app.selectEvent('${e.id}')">
                         <img src="${e.image}" class="event-card-image">
-                        <div class="event-card-overlay">
-                            ${e.date.split('-').slice(1).join('/')}
-                        </div>
+                        <div class="event-status-badge ${statusClass}">${statusText}</div>
                         <div class="event-card-body">
                             <div style="font-weight:700; font-size:18px; margin-bottom:4px; line-height:1.2;">${e.title}</div>
                             <div class="text-xs" style="color:var(--text-secondary); margin-bottom:12px; display:flex; align-items:center; gap:4px;">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                ${e.location || 'Location TBD'}
+                                <span style="font-weight:600; color:var(--accent);">${genre}</span>
+                                <span>•</span>
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                ${e.date}
                             </div>
                             
-                            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--bg-subtle); padding-top:12px;">
-                                <div style="display:flex; align-items:center; gap:6px;">
-                                     <div style="display:flex;">
-                                         <div style="width:24px; height:24px; border-radius:50%; background:var(--bg-input); border:2px solid #fff;"></div>
-                                         <div style="width:24px; height:24px; border-radius:50%; background:var(--bg-input); border:2px solid #fff; margin-left:-8px;"></div>
-                                         <div style="width:24px; height:24px; border-radius:50%; background:var(--accent); color:white; border:2px solid #fff; margin-left:-8px; font-size:8px; display:flex; align-items:center; justify-content:center;">+</div>
-                                     </div>
-                                     <div class="text-xs" style="font-weight:600;">${e.attendees.length} Guests</div>
-                                </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:12px;">
+                                <div class="text-xs" style="font-weight:600;">${e.attendees.length} / ${e.capacity} Sold</div>
                                 <div class="text-xs" style="font-weight:700; color:var(--accent);">MANAGE ></div>
                             </div>
                         </div>
                     </div>
-                `).join('');
+                `}).join('');
             },
 
             createEvent(e) {
@@ -1002,68 +1311,118 @@
                 const newEvent = {
                     id: 'e' + Date.now(),
                     title: document.getElementById('inp-title').value,
-                    description: document.getElementById('inp-desc').value,
+                    genre: document.getElementById('inp-genre').value,
                     location: document.getElementById('inp-loc').value,
                     date: document.getElementById('inp-date').value,
                     time: document.getElementById('inp-time').value,
                     price: document.getElementById('inp-price').value || 0,
-                    image: document.getElementById('final-img-data').value || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=400',
+                    capacity: document.getElementById('inp-capacity').value || 100,
+                    status: 'live',
+                    image: document.getElementById('final-img-data').value || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=600&q=80',
                     attendees: []
                 };
                 this.data.events.unshift(newEvent);
                 this.save();
                 this.closeModal('create');
                 e.target.reset();
-                document.getElementById('preview-img').style.display = 'none';
-                document.getElementById('upload-placeholder').style.display = 'block';
                 this.nav('events');
             },
 
-            // --- GUESTS ---
+            deleteEvent() {
+                const idx = this.data.events.findIndex(e => e.id === this.data.activeEventId);
+                if(idx > -1) {
+                    this.data.events.splice(idx, 1);
+                    this.save();
+                    this.nav('events');
+                }
+            },
+
+            // --- EVENT DETAIL & MANAGEMENT ---
             selectEvent(id) {
                 this.data.activeEventId = id;
                 const evt = this.data.events.find(e => e.id === id);
-                document.getElementById('guest-header').textContent = evt.title;
-                document.getElementById('guest-subheader').textContent = `${evt.date} • ${evt.time}`;
                 
-                // Reset filter
-                this.data.currentFilter = 'all';
-                document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-                document.querySelector('.chip:first-child').classList.add('active');
+                // Header population
+                document.getElementById('detail-header').textContent = evt.title;
+                document.getElementById('detail-date').textContent = evt.date;
+                if(document.getElementById('detail-genre')) document.getElementById('detail-genre').textContent = evt.genre || 'General';
                 
-                this.nav('guests');
-                this.renderGuests();
+                const badge = document.getElementById('detail-status-badge');
+                badge.textContent = evt.status;
+                badge.className = ''; // reset
+                badge.style.background = evt.status === 'live' ? 'var(--success)' : (evt.status === 'sold-out' ? 'var(--accent)' : 'var(--text-tertiary)');
+                
+                // Populate Settings
+                document.getElementById('setting-status').value = evt.status;
+                document.getElementById('setting-capacity').value = evt.capacity;
+                document.getElementById('setting-price').value = evt.price;
+
+                this.switchTab('overview');
+                this.nav('event-detail');
+                this.renderOverviewPulse();
             },
 
-            filterGuestsByStatus(status, chip) {
-                this.vibrate();
-                this.data.currentFilter = status;
-                document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-                chip.classList.add('active');
-                this.renderGuests(document.querySelector('#view-guests input').value);
+            switchTab(tabName) {
+                this.data.activeTab = tabName;
+                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-item').forEach((t, i) => {
+                    const tabs = ['overview', 'guests', 'settings'];
+                    if(tabs[i] === tabName) t.classList.add('active');
+                });
+
+                document.getElementById('tab-overview').style.display = tabName === 'overview' ? 'block' : 'none';
+                document.getElementById('tab-guests').style.display = tabName === 'guests' ? 'block' : 'none';
+                document.getElementById('tab-settings').style.display = tabName === 'settings' ? 'block' : 'none';
+
+                if(tabName === 'overview') this.renderOverviewPulse();
+                if(tabName === 'guests') this.renderGuests();
             },
 
+            renderOverviewPulse() {
+                const evt = this.data.events.find(e => e.id === this.data.activeEventId);
+                const sold = evt.attendees.length;
+                const cap = evt.capacity || 100;
+                const checkedIn = evt.attendees.filter(a => a.status === 'checked-in').length;
+                
+                // Sold Bar
+                document.getElementById('pulse-sold').textContent = sold;
+                document.getElementById('pulse-cap').textContent = cap;
+                const soldPct = Math.min((sold / cap) * 100, 100);
+                document.getElementById('pulse-bar-sales').style.width = `${soldPct}%`;
+                
+                // Financials
+                const rev = sold * parseInt(evt.price);
+                document.getElementById('pulse-revenue').textContent = `$${rev.toLocaleString()}`;
+                document.getElementById('pulse-price').textContent = `$${evt.price}`;
+
+                // Check-in Bar
+                document.getElementById('pulse-in').textContent = checkedIn;
+                const inPct = sold > 0 ? (checkedIn / sold) * 100 : 0;
+                document.getElementById('pulse-bar-checkin').style.width = `${inPct}%`;
+                
+                document.getElementById('pulse-in-count').textContent = checkedIn;
+                document.getElementById('pulse-pending-count').textContent = sold - checkedIn;
+            },
+
+            updateEventSettings() {
+                const evt = this.data.events.find(e => e.id === this.data.activeEventId);
+                evt.status = document.getElementById('setting-status').value;
+                evt.capacity = parseInt(document.getElementById('setting-capacity').value);
+                evt.price = parseInt(document.getElementById('setting-price').value);
+                this.save();
+                
+                // Update Badge in header immediately
+                const badge = document.getElementById('detail-status-badge');
+                badge.textContent = evt.status;
+                badge.style.background = evt.status === 'live' ? 'var(--success)' : (evt.status === 'sold-out' ? 'var(--accent)' : 'var(--text-tertiary)');
+            },
+
+            // --- GUEST LIST & LOGIC ---
             renderGuests(filter = '') {
                 const container = document.getElementById('guests-list');
-                if(!this.data.activeEventId) {
-                    container.innerHTML = `<div style="text-align:center; padding:60px 20px; color:var(--text-tertiary);">Select an event from the Events tab to see guests here.</div>`;
-                    return;
-                }
-
                 const evt = this.data.events.find(e => e.id === this.data.activeEventId);
                 
-                // Update Stats dynamically
-                const total = evt.attendees.length;
-                const checkedIn = evt.attendees.filter(a => a.status === 'checked-in').length;
-                const pending = total - checkedIn;
-                
-                document.getElementById('stat-total').textContent = total;
-                document.getElementById('stat-in').textContent = checkedIn;
-                document.getElementById('stat-pending').textContent = pending;
-
                 let list = evt.attendees.filter(a => a.name.toLowerCase().includes(filter.toLowerCase()));
-
-                // Apply status filter
                 if (this.data.currentFilter !== 'all') {
                     list = list.filter(a => a.status === this.data.currentFilter);
                 }
@@ -1075,26 +1434,28 @@
 
                 container.innerHTML = list.map(a => {
                     const isChecked = a.status === 'checked-in';
-                    const initials = a.name.substring(0,2).toUpperCase();
-                    
-                    // Critical: Ensure code exists (6 digit now)
-                    if(!a.code) {
-                        a.code = Math.floor(100000 + Math.random() * 900000).toString();
-                        this.save();
-                    }
+                    // Generate code if missing
+                    if(!a.code) a.code = Math.floor(100000 + Math.random() * 900000).toString();
                     
                     return `
-                    <div class="list-item" onclick="app.manualCheckIn('${a.id}')" style="background:${isChecked ? 'var(--bg-subtle)' : 'var(--bg-card)'}">
-                        <div class="avatar" style="width:48px; height:48px; background:${isChecked ? 'var(--success-bg)' : 'var(--bg-input)'}; color:${isChecked ? 'var(--success)' : 'inherit'}; border-radius:50%;">
-                            ${isChecked ? '<svg width="20" height="20" stroke="currentColor" stroke-width="3" fill="none" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>' : initials}
+                    <div class="list-item" style="background:${isChecked ? 'var(--bg-subtle)' : 'var(--bg-card)'}">
+                        <div class="avatar" style="width:48px; height:48px; background:${isChecked ? 'var(--success-bg)' : 'var(--bg-input)'}; color:${isChecked ? 'var(--success)' : 'inherit'}; border-radius:50%;" onclick="app.manualCheckIn('${a.id}')">
+                            ${isChecked ? '<svg width="20" height="20" stroke="currentColor" stroke-width="3" fill="none" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>' : a.name.substring(0,2).toUpperCase()}
                         </div>
-                        <div style="flex:1;">
+                        <div style="flex:1;" onclick="app.manualCheckIn('${a.id}')">
                             <div style="font-weight:600; font-size:16px; opacity:${isChecked ? 0.6 : 1}">${a.name}</div>
-                            <div class="text-xs" style="color:var(--text-secondary);">Code: <span style="font-family:monospace; font-weight:700;">${a.code}</span></div>
+                            <div class="text-xs" style="color:var(--text-secondary);">Code: <span class="font-mono">${a.code}</span></div>
                         </div>
-                        <div class="text-xs" style="color:${isChecked ? 'var(--success)' : 'var(--text-tertiary)'}; font-weight:600;">${isChecked ? 'IN' : 'WAITING'}</div>
+                        
+                        <!-- 3 Dot Menu Trigger -->
+                        <button style="padding:8px;" onclick="app.showGuestActions('${a.id}')">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                        </button>
                     </div>
                 `}).join('');
+                
+                // Save any generated codes
+                this.save(); 
             },
 
             manualCheckIn(guestId) {
@@ -1104,46 +1465,95 @@
                 if(guest) {
                     guest.status = guest.status === 'checked-in' ? 'pending' : 'checked-in';
                     this.save();
-                    this.renderGuests(document.querySelector('#view-guests input').value);
+                    this.renderGuests(document.querySelector('#tab-guests input').value);
+                }
+            },
+            
+            showGuestActions(guestId) {
+                this.data.selectedGuestId = guestId;
+                const evt = this.data.events.find(e => e.id === this.data.activeEventId);
+                const guest = evt.attendees.find(a => a.id === guestId);
+                
+                document.getElementById('action-guest-name').textContent = guest.name;
+                document.getElementById('action-guest-detail').textContent = `Ticket ID: ${guest.id}`;
+                this.openModal('guest-actions');
+            },
+
+            refundGuest() {
+                const evt = this.data.events.find(e => e.id === this.data.activeEventId);
+                const idx = evt.attendees.findIndex(a => a.id === this.data.selectedGuestId);
+                
+                if (idx > -1) {
+                    evt.attendees.splice(idx, 1);
+                    this.save();
+                    this.closeModal('guest-actions');
+                    this.renderGuests();
+                    this.vibrate();
+                    alert("Ticket refunded and guest removed.");
                 }
             },
 
             filterGuests(val) { this.renderGuests(val); },
 
-            // --- PROFILE LOGIC ---
-            renderProfile() {
-                document.getElementById('profile-name').textContent = this.data.profile.name;
-                document.getElementById('profile-email').textContent = this.data.profile.email;
-                document.getElementById('profile-org').textContent = this.data.profile.org;
-                document.getElementById('profile-phone').textContent = this.data.profile.phone;
-                document.getElementById('profile-joined').textContent = this.data.profile.joined;
-                
-                // Populate edit fields
-                document.getElementById('edit-name').value = this.data.profile.name;
-                document.getElementById('edit-email').value = this.data.profile.email;
-                document.getElementById('edit-org').value = this.data.profile.org;
-                document.getElementById('edit-phone').value = this.data.profile.phone;
-            },
-
-            saveProfile(e) {
-                e.preventDefault();
-                this.data.profile.name = document.getElementById('edit-name').value;
-                this.data.profile.org = document.getElementById('edit-org').value;
-                this.data.profile.phone = document.getElementById('edit-phone').value;
-                
-                this.save();
-                this.renderProfile();
-                this.closeModal('edit-profile');
+            filterGuestsByStatus(status, chip) {
                 this.vibrate();
+                this.data.currentFilter = status;
+                document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                this.renderGuests(document.querySelector('#tab-guests input').value);
             },
 
-            // --- SCAN FLOW & EVENT SELECTION ---
-            
+            exportDashboardCSV() {
+                if (this.data.events.length === 0) { alert("No data to export."); return; }
+
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "Event ID,Title,Date,Time,Location,Status,Capacity,Price,Sold,Revenue\n";
+
+                this.data.events.forEach(e => {
+                    const sold = e.attendees ? e.attendees.length : 0;
+                    const revenue = sold * (parseInt(e.price) || 0);
+                    // Clean strings for CSV
+                    const title = (e.title || '').replace(/"/g, '""');
+                    const loc = (e.location || '').replace(/"/g, '""');
+                    
+                    const row = `${e.id},"${title}",${e.date},${e.time},"${loc}",${e.status},${e.capacity},${e.price},${sold},${revenue}`;
+                    csvContent += row + "\n";
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `GigByCity_Summary_${new Date().toISOString().slice(0,10)}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            },
+
+            exportGuestListCSV() {
+                const evt = this.data.events.find(e => e.id === this.data.activeEventId);
+                if (!evt.attendees.length) { alert("No guests to export."); return; }
+
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "Name,Ticket Code,Status,CheckIn Time\n";
+
+                evt.attendees.forEach(a => {
+                    const row = `${a.name},${a.code},${a.status},${a.checkInTime || ''}`;
+                    csvContent += row + "\n";
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `${evt.title}_guests.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            },
+
+            // --- SCAN FLOW ---
             initScanFlow() {
                 this.vibrate();
-                // If the user is currently looking at a specific event guest list, scan for THAT event.
-                // Otherwise, ask them which event they want to scan for.
-                if (this.data.activeEventId && document.getElementById('view-guests').classList.contains('active')) {
+                if (this.data.activeEventId && document.getElementById('view-event-detail').classList.contains('active')) {
                     this.startScannerForEvent(this.data.activeEventId);
                 } else {
                     this.showScanEventSelector();
@@ -1153,13 +1563,12 @@
             showScanEventSelector() {
                 const list = document.getElementById('scan-select-list');
                 if (this.data.events.length === 0) {
-                    list.innerHTML = `<div class="text-sm" style="text-align:center; color:var(--text-tertiary);">No events found. Create one first.</div>`;
+                    list.innerHTML = `<div class="text-sm" style="text-align:center; color:var(--text-tertiary);">No events found.</div>`;
                 } else {
                     list.innerHTML = this.data.events.map(e => `
                         <div class="list-item" onclick="app.vibrate(); app.startScannerForEvent('${e.id}')">
                              <div class="avatar" style="width:40px; height:40px; border-radius:10px;"><img src="${e.image}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;"></div>
                              <div style="font-weight:600; font-size:15px; flex:1;">${e.title}</div>
-                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
                         </div>
                     `).join('');
                 }
@@ -1169,10 +1578,8 @@
             startScannerForEvent(eventId) {
                 this.closeModal('scan-select');
                 this.data.scanningEventId = eventId;
-                
                 const evt = this.data.events.find(e => e.id === eventId);
                 document.getElementById('scan-event-name').textContent = evt ? evt.title : 'Unknown Event';
-                
                 document.getElementById('scanner-ui').classList.add('active');
                 this.startCamera();
             },
@@ -1192,53 +1599,41 @@
             startCamera() {
                 document.getElementById('scan-result').classList.remove('show');
                 this.scanner = new Html5Qrcode("reader");
-                const config = { 
-                    fps: 15, 
-                    qrbox: { width: 250, height: 250 }, 
-                    aspectRatio: 1.0 
-                };
+                const config = { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
                 this.scanner.start({ facingMode: "environment" }, config, (decodedText) => {
                     this.handleScan(decodedText);
-                }).catch(err => {
-                    console.log("Camera error: " + err);
-                });
+                }).catch(err => { console.log("Camera error: " + err); });
             },
 
-            // --- SCANNING LOGIC ---
             handleScan(text) {
                 this.scanner.pause();
                 this.vibrate();
                 
-                // QR Format: eventId-guestName
+                // Format: eventId-guestName OR just code
                 const parts = text.split('-');
-                if(parts.length < 2) { 
-                    this.showScanResult('error', 'Invalid Ticket', 'QR code format is not recognized.'); 
-                    return; 
-                }
-
-                const qrEventId = parts[0];
-                const guestName = parts.slice(1).join('-'); // Rejoin in case name has hyphens
-                
-                // 1. Verify Event Match
-                if (qrEventId !== this.data.scanningEventId) {
-                    const scannedEvt = this.data.events.find(e => e.id === qrEventId);
-                    const wrongName = scannedEvt ? scannedEvt.title : 'Another Event';
-                    this.showScanResult('error', 'Wrong Event', `This ticket is for ${wrongName}.`);
-                    return;
-                }
-
-                // 2. Verify Guest
+                let guest = null;
                 const evt = this.data.events.find(e => e.id === this.data.scanningEventId);
-                const guest = evt.attendees.find(a => a.name.toLowerCase() === guestName.toLowerCase());
+
+                if (parts.length >= 2) {
+                    // QR Logic: Check Event Match
+                    if (parts[0] !== this.data.scanningEventId) {
+                        this.showScanResult('error', 'Wrong Event', 'Ticket not for this event.');
+                        return;
+                    }
+                    const name = parts.slice(1).join('-');
+                    guest = evt.attendees.find(a => a.name.toLowerCase() === name.toLowerCase());
+                } else {
+                    // Try exact code match
+                    guest = evt.attendees.find(a => a.code === text);
+                }
 
                 if (!guest) { 
-                    this.showScanResult('error', 'Not Found', `${guestName} is not on the list.`); 
+                    this.showScanResult('error', 'Not Found', 'Guest not on list.'); 
                     return; 
                 }
                 
-                // 3. Verify Status
                 if (guest.status === 'checked-in') { 
-                    this.showScanResult('warn', 'Already Scanned', `${guest.name} checked in already.`); 
+                    this.showScanResult('warn', 'Already Scanned', `${guest.name} is already inside.`); 
                 } else { 
                     guest.status = 'checked-in'; 
                     this.save(); 
@@ -1246,141 +1641,6 @@
                 }
             },
 
-            // --- MANUAL ENTRY & SEARCH ---
-            openManualEntry() {
-                if(this.scanner) this.scanner.pause();
-                this.data.manualCode = '';
-                this.updateCodeDisplay();
-                // Clear any error states
-                document.getElementById('code-display').classList.remove('error');
-                
-                // Default to Code view
-                this.toggleManualMode('code');
-                this.openModal('manual-entry');
-            },
-
-            toggleManualMode(mode) {
-                this.vibrate();
-                // UI Toggle
-                document.getElementById('tab-btn-code').classList.toggle('active', mode === 'code');
-                document.getElementById('tab-btn-name').classList.toggle('active', mode === 'name');
-                
-                document.getElementById('manual-mode-code').style.display = mode === 'code' ? 'block' : 'none';
-                document.getElementById('manual-mode-name').style.display = mode === 'name' ? 'block' : 'none';
-
-                if(mode === 'name') {
-                    document.getElementById('manual-search-inp').value = '';
-                    document.getElementById('manual-search-inp').focus();
-                    this.searchGuestForCheckIn('');
-                }
-            },
-
-            // Mode 1: Code Numpad
-            padInput(num) {
-                this.vibrate();
-                // Reset error state on typing
-                const display = document.getElementById('code-display');
-                if(display.classList.contains('error')) {
-                    display.classList.remove('error');
-                    this.data.manualCode = '';
-                }
-                
-                if(this.data.manualCode.length < 6) { // Changed to 6
-                    this.data.manualCode += num.toString();
-                    this.updateCodeDisplay();
-                }
-            },
-
-            padClear() {
-                this.vibrate();
-                this.data.manualCode = '';
-                document.getElementById('code-display').classList.remove('error');
-                this.updateCodeDisplay();
-            },
-
-            updateCodeDisplay() {
-                document.getElementById('code-display').textContent = this.data.manualCode.padEnd(6, '_').split('').join(' ');
-            },
-
-            padSubmit() {
-                this.vibrate();
-                const code = this.data.manualCode;
-                const display = document.getElementById('code-display');
-                
-                // UX: Shake if incomplete
-                if(code.length < 6) { // Changed to 6
-                    display.classList.add('error');
-                    display.classList.add('shake');
-                    setTimeout(() => display.classList.remove('shake'), 400);
-                    return;
-                }
-
-                const evt = this.data.events.find(e => e.id === this.data.scanningEventId);
-                const guest = evt.attendees.find(a => a.code === code);
-                
-                if(!guest) {
-                    // Invalid Code Logic: Keep modal open, shake input, show error
-                    display.classList.add('error');
-                    display.classList.add('shake');
-                    setTimeout(() => display.classList.remove('shake'), 400);
-                } else {
-                    // Valid Code Logic: Close modal, show success on scanner
-                    this.closeModal('manual-entry');
-                    
-                    if(guest.status === 'checked-in') {
-                        this.showScanResult('warn', 'Already Entered', `${guest.name} is already inside.`);
-                    } else {
-                        guest.status = 'checked-in';
-                        this.save();
-                        this.showScanResult('success', 'Verified', `Code accepted for ${guest.name}`);
-                    }
-                }
-            },
-
-            // Mode 2: Name Search
-            searchGuestForCheckIn(val) {
-                const container = document.getElementById('manual-search-results');
-                const evt = this.data.events.find(e => e.id === this.data.scanningEventId);
-                const list = evt.attendees.filter(a => a.name.toLowerCase().includes(val.toLowerCase()));
-
-                if(list.length === 0) {
-                    container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-tertiary);">No guests found.</div>`;
-                    return;
-                }
-
-                container.innerHTML = list.map(a => {
-                    const isChecked = a.status === 'checked-in';
-                    return `
-                    <div class="list-item" onclick="app.vibrate(); app.manualCheckInFromSearch('${a.id}')" style="padding:12px;">
-                        <div class="avatar" style="width:36px; height:36px; font-size:12px;">${a.name.substring(0,2).toUpperCase()}</div>
-                        <div style="flex:1;">
-                            <div style="font-weight:600; font-size:14px;">${a.name}</div>
-                            <div class="text-xs" style="color:var(--text-secondary);">Code: ${a.code}</div>
-                        </div>
-                        ${isChecked 
-                            ? `<span style="color:var(--success); font-size:12px; font-weight:700;">IN</span>` 
-                            : `<button style="background:var(--accent); color:white; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600;">Check In</button>`
-                        }
-                    </div>
-                `}).join('');
-            },
-
-            manualCheckInFromSearch(guestId) {
-                const evt = this.data.events.find(e => e.id === this.data.scanningEventId);
-                const guest = evt.attendees.find(a => a.id === guestId);
-
-                this.closeModal('manual-entry');
-
-                if(guest.status === 'checked-in') {
-                    this.showScanResult('warn', 'Already Scanned', `${guest.name} checked in already.`);
-                } else {
-                    guest.status = 'checked-in';
-                    this.save();
-                    this.showScanResult('success', 'Verified', `Checked in ${guest.name} manually.`);
-                }
-            },
-
-            // --- RESULT UI ---
             showScanResult(type, title, msg) {
                 const card = document.getElementById('scan-result');
                 const icon = document.getElementById('scan-icon');
@@ -1406,38 +1666,110 @@
                 if(this.scanner) this.scanner.resume(); 
             },
 
-            // --- UTILS ---
-            toggleDemoMode() {
-                const container = document.getElementById('demo-qr-area');
-                const isHidden = container.style.display === 'none';
-                container.style.display = isHidden ? 'flex' : 'none';
-                if(isHidden && !this.demoQr) {
-                    this.demoQr = new QRCode(document.getElementById("qrcode"), { text: "e1-Bob Smith", width: 128, height: 128 });
+            // --- MANUAL ENTRY ---
+            openManualEntry() {
+                if(this.scanner) this.scanner.pause();
+                this.data.manualCode = '';
+                document.getElementById('code-display').textContent = '______';
+                document.getElementById('code-display').classList.remove('error');
+                this.toggleManualMode('code');
+                this.openModal('manual-entry');
+            },
+
+            toggleManualMode(mode) {
+                this.vibrate();
+                document.getElementById('tab-btn-code').classList.toggle('active', mode === 'code');
+                document.getElementById('tab-btn-name').classList.toggle('active', mode === 'name');
+                document.getElementById('manual-mode-code').style.display = mode === 'code' ? 'block' : 'none';
+                document.getElementById('manual-mode-name').style.display = mode === 'name' ? 'block' : 'none';
+                if(mode === 'name') {
+                    document.getElementById('manual-search-inp').value = '';
+                    this.searchGuestForCheckIn('');
                 }
             },
+
+            padInput(num) {
+                this.vibrate();
+                const display = document.getElementById('code-display');
+                if(display.classList.contains('error')) { display.classList.remove('error'); this.data.manualCode = ''; }
+                if(this.data.manualCode.length < 6) {
+                    this.data.manualCode += num.toString();
+                    display.textContent = this.data.manualCode.padEnd(6, '_');
+                }
+            },
+            padClear() { this.vibrate(); this.data.manualCode = ''; document.getElementById('code-display').textContent = '______'; },
             
-            // --- CROPPER ---
+            padSubmit() {
+                this.vibrate();
+                if(this.data.manualCode.length < 6) { document.getElementById('code-display').classList.add('shake'); setTimeout(()=>document.getElementById('code-display').classList.remove('shake'), 400); return; }
+                
+                const evt = this.data.events.find(e => e.id === this.data.scanningEventId);
+                const guest = evt.attendees.find(a => a.code === this.data.manualCode);
+                
+                if(guest) {
+                    this.closeModal('manual-entry');
+                    if(guest.status === 'checked-in') this.showScanResult('warn', 'Already Scanned', 'Guest is inside.');
+                    else { guest.status = 'checked-in'; this.save(); this.showScanResult('success', 'Verified', `Code accepted for ${guest.name}`); }
+                } else {
+                    document.getElementById('code-display').classList.add('error');
+                    document.getElementById('code-display').classList.add('shake');
+                    setTimeout(()=>document.getElementById('code-display').classList.remove('shake'), 400);
+                }
+            },
+
+            searchGuestForCheckIn(val) {
+                const container = document.getElementById('manual-search-results');
+                const evt = this.data.events.find(e => e.id === this.data.scanningEventId);
+                const list = evt.attendees.filter(a => a.name.toLowerCase().includes(val.toLowerCase()));
+                if(list.length === 0) { container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-tertiary);">No match found</div>`; return; }
+                
+                container.innerHTML = list.map(a => `
+                    <div class="list-item" onclick="app.manualCheckInFromSearch('${a.id}')" style="padding:12px;">
+                        <div style="font-weight:600; font-size:14px; flex:1;">${a.name} <span class="text-xs" style="font-weight:400; color:var(--text-secondary);">(${a.code})</span></div>
+                        ${a.status==='checked-in' ? '<span style="color:var(--success); font-size:12px; font-weight:700;">IN</span>' : '<button style="background:var(--accent); color:white; padding:4px 10px; border-radius:8px; font-size:12px;">Check In</button>'}
+                    </div>
+                `).join('');
+            },
+
+            manualCheckInFromSearch(guestId) {
+                const evt = this.data.events.find(e => e.id === this.data.scanningEventId);
+                const guest = evt.attendees.find(a => a.id === guestId);
+                this.closeModal('manual-entry');
+                if(guest.status === 'checked-in') this.showScanResult('warn', 'Already Scanned', 'Guest is inside.');
+                else { guest.status = 'checked-in'; this.save(); this.showScanResult('success', 'Verified', `Checked in ${guest.name}`); }
+            },
+
+            // --- UTILS & PROFILE & CROPPER ---
+            saveProfile(e) {
+                e.preventDefault();
+                this.data.profile.name = document.getElementById('edit-name').value;
+                this.data.profile.email = document.getElementById('edit-email').value;
+                this.data.profile.org = document.getElementById('edit-org').value;
+                this.save();
+                this.renderProfile();
+                this.closeModal('edit-profile');
+                alert("Profile Updated Successfully!"); // Feedback for user
+            },
+            renderProfile() {
+                if(document.getElementById('profile-name')) document.getElementById('profile-name').textContent = this.data.profile.name;
+                if(document.getElementById('profile-org')) document.getElementById('profile-org').textContent = this.data.profile.org;
+                if(document.getElementById('profile-email')) document.getElementById('profile-email').textContent = this.data.profile.email;
+                
+                if(document.getElementById('edit-name')) document.getElementById('edit-name').value = this.data.profile.name;
+                if(document.getElementById('edit-email')) document.getElementById('edit-email').value = this.data.profile.email;
+                if(document.getElementById('edit-org')) document.getElementById('edit-org').value = this.data.profile.org;
+            },
             handleImage(e) {
                 const file = e.target.files[0];
                 if (file) {
-                    // Reset value so same file can be selected again if cancelled
                     e.target.value = ''; 
-                    
                     const reader = new FileReader();
                     reader.onload = (evt) => {
                         document.getElementById('crop-target').src = evt.target.result;
                         this.openModal('crop');
-                        
-                        // Small timeout to ensure modal is visible for Cropper calculation
                         setTimeout(() => {
                             if(this.cropper) this.cropper.destroy();
-                            this.cropper = new Cropper(document.getElementById('crop-target'), { 
-                                aspectRatio: 16 / 9, 
-                                viewMode: 2, 
-                                autoCropArea: 1,
-                                dragMode: 'move',
-                                toggleDragModeOnDblclick: false
-                            });
+                            this.cropper = new Cropper(document.getElementById('crop-target'), { aspectRatio: 16 / 9, viewMode: 1, autoCropArea: 1 });
                         }, 100);
                     };
                     reader.readAsDataURL(file);
@@ -1448,9 +1780,8 @@
                     const canvas = this.cropper.getCroppedCanvas({width: 600});
                     const base64 = canvas.toDataURL();
                     document.getElementById('final-img-data').value = base64;
-                    const preview = document.getElementById('preview-img');
-                    preview.src = base64;
-                    preview.style.display = 'block';
+                    document.getElementById('preview-img').src = base64;
+                    document.getElementById('preview-img').style.display = 'block';
                     document.getElementById('upload-placeholder').style.display = 'none';
                     this.closeModal('crop');
                     this.cropper.destroy();
@@ -1459,10 +1790,7 @@
             openModal(id) { document.getElementById('modal-' + id).classList.add('active'); },
             closeModal(id) { 
                 document.getElementById('modal-' + id).classList.remove('active'); 
-                // If closing manual entry, resume scanner
-                if(id === 'manual-entry' && this.scanner && document.getElementById('scanner-ui').classList.contains('active')) {
-                    this.scanner.resume();
-                }
+                if(id === 'manual-entry' && this.scanner && document.getElementById('scanner-ui').classList.contains('active')) this.scanner.resume();
             }
         };
 

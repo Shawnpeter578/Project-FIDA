@@ -15,14 +15,14 @@
 
     <style>
           /* =========================================
-             THEME: PLATINUM & CRIMSON (LIGHT PERMANENT)
+             THEME: PLATINUM & CRIMSON (LIGHT DEFAULT)
              ========================================= */
           :root {
               --font-main: 'Space Grotesk', sans-serif;
               --font-mono: 'JetBrains Mono', monospace;
               --font-barcode: 'Libre Barcode 128 Text', cursive;
               
-              /* --- PALETTE --- */
+              /* --- PALETTE (LIGHT) --- */
               --bg-body: #F2F2F4;
               --bg-dots: #E4E4E7;
               
@@ -31,6 +31,8 @@
               --bg-surface-glass: rgba(255, 255, 255, 0.90);
               --bg-card: #FFFFFF;
               --bg-card-sub: #F8F8FA;
+              --input-bg: rgba(255,255,255,0.6);
+              --input-bg-focus: #FFFFFF;
               
               /* Accents */
               --accent: #E61919;
@@ -66,6 +68,159 @@
               /* Animation */
               --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
               --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+              /* Background Pattern Opacity */
+              --noise-opacity: 0.03;
+              --ambient-opacity: 0; /* Hidden in light mode */
+          }
+
+          /* =========================================
+             THEME: DARK MODE (PSYCHOLOGICAL & IMMERSIVE)
+             ========================================= */
+          body.dark-mode {
+              /* --- PALETTE (DARK) --- */
+              /* Deep, Rich Black (Not flat #000) for depth perception */
+              --bg-body: #050505; 
+              --bg-dots: rgba(255, 255, 255, 0.03);
+              
+              /* Glass & Surface - The "OLED Glass" Look */
+              /* High transparency with blur creates depth */
+              --bg-surface: #121212; 
+              --bg-surface-glass: rgba(10, 10, 10, 0.85);
+              
+              /* Cards: Dark Zinc with subtle gradients */
+              --bg-card: #0F0F11; 
+              --bg-card-sub: #18181b; 
+              --input-bg: rgba(255,255,255,0.03);
+              --input-bg-focus: rgba(255,255,255,0.08);
+
+              /* Accents - Electric Crimson */
+              --accent: #ff2a2a; 
+              --accent-dim: #b91c1c;
+              --accent-glow: rgba(255, 42, 42, 0.35); 
+              --accent-text: #FFFFFF;
+              
+              /* Text - High Contrast for Readability */
+              --text-main: #EDEDED; 
+              --text-sec: #A1A1AA;  
+              --text-muted: #52525b; 
+              
+              /* Borders & Depth - The "Light Edge" */
+              /* Using light borders instead of dark shadows to define space */
+              --border: rgba(255, 255, 255, 0.08);
+              --border-strong: rgba(255, 255, 255, 0.15);
+              
+              /* Shadows - Colored Glows */
+              --shadow-sm: 0 4px 20px rgba(0,0,0,0.5); 
+              --shadow-md: 0 8px 30px rgba(0,0,0,0.7);
+              --shadow-lg: 0 20px 50px rgba(0,0,0,0.9);
+              
+              --nav-glass: rgba(5, 5, 5, 0.85);
+              --noise-opacity: 0.05;
+              --ambient-opacity: 1; /* Show ambient lights */
+          }
+
+          /* --- DARK MODE SPECIFIC OVERRIDES --- */
+          
+          /* Ambient Background Glow (Psychological Effect: Atmosphere) */
+          body.dark-mode::before {
+              content: '';
+              position: fixed;
+              top: -20%;
+              left: -20%;
+              width: 140%;
+              height: 140%;
+              background: 
+                  radial-gradient(circle at 50% 0%, rgba(255, 42, 42, 0.08) 0%, transparent 40%),
+                  radial-gradient(circle at 80% 20%, rgba(50, 50, 200, 0.05) 0%, transparent 30%);
+              z-index: -1;
+              pointer-events: none;
+              opacity: var(--ambient-opacity);
+              transition: opacity 0.5s;
+          }
+
+          /* Card Styling: "Floating Glass" */
+          body.dark-mode .ticket-inner,
+          body.dark-mode .pass-card,
+          body.dark-mode .auth-card,
+          body.dark-mode .search-bar-modern,
+          body.dark-mode .inp-group-icon,
+          body.dark-mode .detail-content-wrapper,
+          body.dark-mode .detail-map-card,
+          body.dark-mode .ob-content-card {
+              background: rgba(20, 20, 22, 0.6); /* Semi-transparent */
+              backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+              border: 1px solid rgba(255, 255, 255, 0.08);
+              box-shadow: 0 10px 40px -10px rgba(0,0,0,0.8);
+          }
+          
+          /* Hover Effects: Add Luminosity */
+          body.dark-mode .ticket:active .ticket-inner {
+              border-color: rgba(255, 255, 255, 0.2);
+              background: rgba(30, 30, 35, 0.8);
+          }
+
+          /* Inputs: Clean & Matte */
+          body.dark-mode .inp, 
+          body.dark-mode .search-bar-modern {
+             background: rgba(0,0,0,0.3);
+             border: 1px solid rgba(255,255,255,0.06);
+          }
+          body.dark-mode .inp:focus,
+          body.dark-mode .search-bar-modern:focus-within {
+             border-color: var(--accent);
+             box-shadow: 0 0 0 1px var(--accent), 0 0 15px var(--accent-glow);
+             background: rgba(0,0,0,0.5);
+          }
+
+          /* Action Buttons: High Visibility / Neon */
+          body.dark-mode .btn-main, 
+          body.dark-mode .ticket.joined .ticket-status-bar {
+             background: linear-gradient(135deg, #ff4d4d 0%, #cc0000 100%);
+             color: white;
+             box-shadow: 0 4px 20px rgba(255, 0, 0, 0.4);
+             border: none;
+          }
+          body.dark-mode .btn-action {
+             background: white;
+             color: black;
+          }
+          body.dark-mode .btn-main:active {
+             box-shadow: 0 2px 10px rgba(255, 0, 0, 0.2);
+          }
+
+          /* Text Glows for Headers */
+          body.dark-mode .hero-title,
+          body.dark-mode .detail-title-large,
+          body.dark-mode .ob-title,
+          body.dark-mode .auth-logo {
+             text-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+          }
+
+          /* Nav Dock: Floating Island */
+          body.dark-mode .dock {
+             background: rgba(15, 15, 15, 0.8);
+             border: 1px solid rgba(255,255,255,0.1);
+             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+          }
+          body.dark-mode .dock-item.active {
+             background: rgba(255,255,255,0.1);
+             color: white;
+             box-shadow: 0 0 15px rgba(255,255,255,0.05);
+          }
+
+          /* Stubs & Rips: Seamless Blend */
+          body.dark-mode .ticket-stub,
+          body.dark-mode .ticket-rip,
+          body.dark-mode .detail-sticky-footer {
+              background: rgba(0, 0, 0, 0.4);
+              border-color: rgba(255,255,255,0.05);
+          }
+          body.dark-mode .ticket-rip::before,
+          body.dark-mode .ticket-rip::after {
+              background: var(--bg-body);
+              border-color: rgba(255,255,255,0.08);
+              box-shadow: inset 0 0 10px rgba(0,0,0,1);
           }
 
           * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
@@ -76,16 +231,15 @@
               font-family: var(--font-main);
               overflow-x: hidden;
               padding-bottom: calc(100px + var(--safe-bottom));
-              transition: background 0.4s var(--ease-out), color 0.4s;
+              transition: background-color 0.4s var(--ease-out), color 0.4s;
               
-              /* Premium Noise Texture & Dot Grid */
+              /* Clean Dot Grid */
               background-image: 
-                  radial-gradient(var(--bg-dots) 1px, transparent 1px),
-                  url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
-              background-size: 24px 24px, 200px 200px;
+                  radial-gradient(var(--bg-dots) 1px, transparent 1px);
+              background-size: 24px 24px;
               background-attachment: fixed;
           }
-
+          
           /* Scrollbar */
           ::-webkit-scrollbar { width: 0px; display: none; }
           .hidden { display: none !important; }
@@ -110,12 +264,11 @@
           #splashScreen {
               position: fixed; inset: 0; background: var(--bg-body); z-index: 9999;
               display: flex; flex-direction: column; align-items: center; justify-content: center;
-              transition: opacity 0.6s ease, visibility 0.6s;
+              transition: opacity 0.6s ease, visibility 0.6s, background-color 0.4s;
           }
           .splash-logo {
               font-size: 4rem; font-weight: 800; letter-spacing: -0.06em;
-              background: linear-gradient(135deg, var(--text-main), var(--text-muted)); 
-              -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+              color: var(--text-main);
               margin-bottom: 20px;
           }
           .splash-loader {
@@ -124,7 +277,7 @@
           }
           .splash-loader::after {
               content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 50%;
-              background: var(--accent); animation: scanline 1s infinite linear;
+              background: var(--text-main); animation: scanline 1s infinite linear;
           }
 
           /* Header */
@@ -132,9 +285,11 @@
               position: fixed; top: 0; left: 0; right: 0; z-index: 50;
               height: var(--header-height); padding: var(--safe-top) 24px 10px;
               display: flex; align-items: center; justify-content: space-between;
-              background: linear-gradient(to bottom, var(--bg-body) 60%, rgba(242, 242, 244, 0) 100%);
+              /* Gradient Fade Updated for variable bg */
+              background: linear-gradient(to bottom, var(--bg-body) 60%, transparent 100%);
               pointer-events: none;
               backdrop-filter: blur(2px);
+              transition: background 0.4s;
           }
           .app-header > * { pointer-events: auto; }
 
@@ -146,7 +301,7 @@
           .brand-mark {
               width: 10px; height: 10px; background: var(--accent); 
               border-radius: 2px; transform: rotate(45deg);
-              box-shadow: 0 0 15px var(--accent);
+              transition: background 0.4s;
           }
 
           .user-pill {
@@ -184,27 +339,28 @@
               margin-bottom: 8px;
               pointer-events: auto;
               /* Gradient fade below search bar */
-              background: linear-gradient(to bottom, var(--bg-body) 40%, rgba(242, 242, 244, 0) 100%);
+              background: linear-gradient(to bottom, var(--bg-body) 40%, transparent 100%);
+              transition: background 0.4s;
           }
 
           .search-bar-modern {
               width: 100%;
               height: 52px;
-              background: rgba(255, 255, 255, 0.85);
+              background: var(--bg-surface-glass);
               backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-              border: 1px solid rgba(0,0,0,0.08);
+              border: 1px solid var(--border);
               border-radius: 100px;
               display: flex;
               align-items: center;
               padding: 0 6px 0 20px;
-              box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+              box-shadow: var(--shadow-sm);
               transition: all 0.3s var(--ease-spring);
           }
 
           .search-bar-modern:focus-within {
-              background: #ffffff;
-              border-color: var(--accent);
-              box-shadow: 0 8px 30px rgba(230, 25, 25, 0.15);
+              background: var(--bg-surface);
+              border-color: var(--text-muted);
+              box-shadow: var(--shadow-md);
               transform: translateY(-2px);
           }
 
@@ -269,9 +425,10 @@
               border-radius: var(--radius-lg);
               overflow: hidden;
               /* Softer, deeper shadow */
-              box-shadow: 0 20px 40px -10px rgba(0,0,0,0.3);
-              background: #000;
+              box-shadow: var(--shadow-lg);
+              background: var(--bg-card);
               transform: translate3d(0,0,0);
+              border: 1px solid var(--border);
           }
 
           .carousel-track {
@@ -375,13 +532,13 @@
           .ticket:active .ticket-inner { transform: scale(0.98); }
 
           .ticket-inner::before {
-              content: ""; position: absolute; inset: 0; opacity: 0.03; pointer-events: none;
+              content: ""; position: absolute; inset: 0; opacity: var(--noise-opacity); pointer-events: none;
               background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
           }
 
           .ticket-status-bar { height: 6px; width: 100%; background: var(--bg-dots); position: relative; }
-          .ticket.joined .ticket-status-bar { background: var(--accent); box-shadow: 0 0 20px var(--accent); }
-          .ticket.in-hall .ticket-status-bar { background: var(--success); box-shadow: 0 0 20px var(--success); }
+          .ticket.joined .ticket-status-bar { background: var(--accent); }
+          .ticket.in-hall .ticket-status-bar { background: var(--success); }
           .ticket.sold-out .ticket-status-bar { background: var(--text-muted); }
 
           .ticket-content { padding: 28px 28px 24px; position: relative; }
@@ -476,7 +633,7 @@
               padding-right: 8px; /* Extra padding for arrow */
           }
           .t-loc.interactive:hover {
-              background: #fff;
+              background: var(--bg-surface);
               color: var(--accent);
               border-color: var(--accent);
               box-shadow: 0 4px 12px rgba(230, 25, 25, 0.15);
@@ -536,7 +693,7 @@
           .pass-card.stacked-passes {
               box-shadow: 
                   0 4px 12px rgba(0,0,0,0.03),
-                  0 10px 0 -5px #e4e4e7, /* First underlying card */
+                  0 10px 0 -5px var(--bg-dots), /* First underlying card */
                   0 10px 1px -4px rgba(0,0,0,0.05); /* Shadow for it */
               margin-bottom: 24px; /* Extra space for the stack */
               border-color: var(--text-main); /* Darker border to signify importance */
@@ -562,7 +719,7 @@
           .pass-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); }
 
           .pass-card.checked-in {
-              background: #f0fdf4; /* Light green tint */
+              background: rgba(16, 185, 129, 0.1);
               border-color: var(--success);
           }
 
@@ -630,10 +787,10 @@
           .dock {
               background: var(--nav-glass); backdrop-filter: var(--blur-strength);
               -webkit-backdrop-filter: var(--blur-strength);
-              border: 1px solid rgba(255,255,255,0.6);
+              border: 1px solid var(--border);
               padding: 8px; border-radius: 32px;
               display: flex; gap: 8px; pointer-events: auto;
-              box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+              box-shadow: 0 20px 40px rgba(0,0,0,0.2);
               align-items: center;
               max-width: 100%;
           }
@@ -649,7 +806,7 @@
           
           /* Modals / Sheets */
           .overlay {
-              position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(8px);
+              position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
               -webkit-backdrop-filter: blur(8px);
               z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.4s;
               display: flex; justify-content: center; align-items: flex-end;
@@ -664,7 +821,7 @@
               transform: translateY(110%); transition: transform 0.5s var(--ease-spring);
               z-index: 201; display: flex; flex-direction: column;
               max-height: 92vh;
-              box-shadow: 0 -10px 40px rgba(0,0,0,0.15); /* Softer sheet shadow */
+              box-shadow: 0 -10px 40px rgba(0,0,0,0.3); /* Softer sheet shadow */
               margin: 0 auto;
           }
           .overlay.visible .sheet { transform: translateY(0); }
@@ -700,8 +857,9 @@
               display: flex; justify-content: space-between; align-items: center;
               cursor: pointer;
               transition: 0.2s;
+              color: var(--text-main);
           }
-          .filter-option:hover { background: #f0f0f5; }
+          .filter-option:hover { background: var(--bg-dots); }
           .filter-option.selected {
               background: var(--text-main); color: var(--bg-body);
           }
@@ -722,7 +880,7 @@
           }
 
           .inp-group-icon {
-              background: #fff; border-radius: 18px; padding: 0 20px;
+              background: var(--bg-surface); border-radius: 18px; padding: 0 20px;
               height: 64px; display: flex; align-items: center; gap: 14px;
               border: 1px solid var(--border); transition: 0.2s;
               box-shadow: var(--shadow-sm);
@@ -740,7 +898,7 @@
           
           /* Auth Screen */
           .auth-wrap {
-              position: fixed; inset: 0; background: #F2F2F4; z-index: 5000;
+              position: fixed; inset: 0; background: var(--bg-body); z-index: 5000;
               display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px;
               transition: transform 0.6s cubic-bezier(0.8, 0, 0.2, 1);
           }
@@ -754,21 +912,21 @@
               width: 100%; height: 100%; object-fit: cover;
               animation: bgDrift 25s infinite alternate ease-in-out;
               transform-origin: center;
-              filter: saturate(0.8); /* Slightly desaturated for professional look */
+              filter: saturate(0.8) brightness(0.9);
           }
           .auth-overlay {
               position: absolute; inset: 0;
-              background: rgba(244, 244, 245, 0.6); /* Frosted Platinum Overlay */
+              background: rgba(24, 24, 27, 0.4); /* Darker overlay for adaptability */
               backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
           }
 
           .auth-card { 
               width: 100%; max-width: 400px; 
-              background: rgba(255, 255, 255, 0.85);
+              background: var(--bg-surface-glass);
               backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
               padding: 48px 40px; border-radius: 32px;
-              border: 1px solid rgba(255, 255, 255, 0.6);
-              box-shadow: 0 20px 60px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.5);
+              border: 1px solid var(--border);
+              box-shadow: 0 20px 60px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.1);
               position: relative;
           }
           .auth-header { margin-bottom: 40px; text-align: center; }
@@ -781,15 +939,15 @@
           
           .inp-group { margin-bottom: 20px; position: relative; }
           .inp {
-              width: 100%; height: 64px; background: rgba(255,255,255,0.6);
-              border: 1px solid rgba(0,0,0,0.08); border-radius: 20px;
+              width: 100%; height: 64px; background: var(--input-bg);
+              border: 1px solid var(--border); border-radius: 20px;
               padding: 0 24px; font-size: 1.05rem; color: var(--text-main);
               transition: 0.3s; font-family: var(--font-main);
               box-shadow: inset 0 2px 4px rgba(0,0,0,0.01);
           }
           .inp:focus { 
               border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-glow); 
-              background: #fff; transform: translateY(-2px); 
+              background: var(--input-bg-focus); transform: translateY(-2px); 
           }
           
           .btn-main {
@@ -808,79 +966,137 @@
           .icon { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
           .icon-sm { width: 16px; height: 16px; stroke-width: 2.5; }
 
-          /* Updated Details Card Styles */
+          /* =========================================
+             UPDATED DETAILS CARD (ULTRA PREMIUM)
+             ========================================= */
+          
+          /* New Hero Container for Details */
           .detail-hero-container {
-                position: relative;
-                width: 100%;
-                height: 300px; /* Taller */
-                border-radius: 24px;
-                overflow: hidden;
-                margin-bottom: 24px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            }
-            .detail-hero-img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-            .detail-badge {
-                position: absolute;
-                top: 20px; left: 20px;
-                background: rgba(255,255,255,0.9);
-                backdrop-filter: blur(10px);
-                padding: 8px 16px;
-                border-radius: 100px;
-                font-weight: 700;
-                font-size: 0.8rem;
-                color: var(--text-main);
-                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            }
-            
-            /* UPDATED: Larger text for Detail Modal Date/Time */
-            .detail-info-row {
-                display: flex;
-                align-items: center;
-                gap: 16px;
-                margin-bottom: 24px;
-                color: var(--text-sec);
-                font-weight: 700;
-                font-size: 1.25rem; /* Larger */
-            }
-            
-            .detail-stat-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 12px;
-                margin-bottom: 28px;
-            }
-            .detail-stat-card {
-                background: var(--bg-card-sub);
-                padding: 16px;
-                border-radius: 16px;
-                border: 1px solid var(--border);
-            }
-            .detail-stat-label {
-                font-size: 0.75rem;
-                text-transform: uppercase;
-                color: var(--text-muted);
-                font-weight: 700;
-                margin-bottom: 4px;
-                letter-spacing: 0.05em;
-            }
-            .detail-stat-value {
-                font-size: 1.1rem;
-                font-weight: 700;
-                color: var(--text-main);
-                font-family: var(--font-mono);
-            }
-            .detail-description {
-                font-size: 1.05rem;
-                line-height: 1.7;
-                color: var(--text-sec);
-                margin-bottom: 40px;
-            }
+              width: 100%;
+              height: 280px; /* Taller for immersive feel */
+              border-radius: 24px;
+              overflow: hidden;
+              position: relative;
+              box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+              margin-bottom: 24px;
+          }
+          .detail-hero-img {
+              width: 100%; height: 100%; object-fit: cover;
+              transition: transform 0.5s;
+          }
+          /* Subtle zoom animation on load if we were using JS triggers, keeping it static for now */
+          
+          /* Floating Badge in Hero */
+          .detail-badge-floating {
+              position: absolute; top: 16px; left: 16px;
+              background: rgba(255, 255, 255, 0.95);
+              backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+              padding: 6px 14px;
+              border-radius: 100px;
+              font-weight: 800; font-size: 0.75rem;
+              color: #000;
+              box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+              z-index: 2;
+              letter-spacing: 0.05em;
+              text-transform: uppercase;
+          }
 
-            /* --- NEW QUANTITY SELECTOR STYLES --- */
+          /* New Title & Meta Layout */
+          .detail-title-large {
+              font-size: 2rem; font-weight: 800; line-height: 1.05;
+              margin-bottom: 12px; letter-spacing: -0.04em;
+              color: var(--text-main);
+          }
+          
+          .detail-meta-flex {
+              display: flex; align-items: center; gap: 16px;
+              margin-bottom: 24px; color: var(--text-sec);
+              font-size: 0.95rem; font-weight: 600;
+              flex-wrap: wrap;
+          }
+          .detail-meta-item { display: flex; align-items: center; gap: 8px; }
+          .detail-meta-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--border-strong); }
+
+          /* New Interactive Location Card */
+          .detail-map-card {
+              background: var(--bg-card-sub);
+              border: 1px solid var(--border);
+              border-radius: 20px;
+              padding: 16px;
+              display: flex; align-items: flex-start; gap: 14px;
+              margin-bottom: 24px;
+              cursor: pointer;
+              transition: 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+              position: relative;
+          }
+          .detail-map-card:hover {
+              background: var(--bg-surface);
+              border-color: var(--accent);
+              transform: translateY(-2px);
+              box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
+          }
+          .detail-map-card:active { transform: scale(0.98); }
+          
+          .map-icon-box {
+              width: 44px; height: 44px; background: var(--bg-surface);
+              border-radius: 12px; display: flex; align-items: center; justify-content: center;
+              border: 1px solid var(--border); color: var(--accent);
+              flex-shrink: 0;
+          }
+          .map-info { flex: 1; }
+          .map-label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.05em; }
+          .map-address { font-size: 0.95rem; font-weight: 600; color: var(--text-main); line-height: 1.4; padding-right: 20px; }
+          
+          .map-arrow {
+              position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+              color: var(--text-muted); opacity: 0.5;
+          }
+
+          /* New Stats Grid */
+          .detail-stats-grid {
+              display: grid; grid-template-columns: 1fr 1fr; gap: 10px; /* UPDATED to 2 columns */
+              margin-bottom: 32px;
+          }
+          .stat-pill {
+              background: var(--bg-surface); border: 1px solid var(--border);
+              padding: 14px 8px; border-radius: 16px;
+              display: flex; flex-direction: column; align-items: center; text-align: center;
+              gap: 4px;
+              transition: 0.2s;
+          }
+          .stat-pill:hover { border-color: var(--text-muted); }
+          .stat-val { font-size: 1rem; font-weight: 800; color: var(--text-main); font-family: var(--font-mono); }
+          .stat-lbl { font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+          /* Perfected Description Typography */
+          .detail-desc-text {
+              font-size: 1.05rem; 
+              line-height: 1.8; /* Increased line height */
+              color: var(--text-sec);
+              margin-bottom: 40px;
+              font-weight: 400; /* Cleaner weight */
+              letter-spacing: 0.01em; /* Subtle spacing */
+          }
+
+          /* Sticky Footer Actions */
+          .detail-sticky-footer {
+              position: sticky; bottom: 0;
+              margin: 0 -28px -48px; /* Counteract sheet padding */
+              padding: 20px 28px 40px;
+              background: var(--bg-surface);
+              border-top: 1px solid var(--border);
+              display: flex; flex-direction: column; gap: 12px;
+              z-index: 20;
+              /* Blur background for stickiness feel */
+              background: var(--bg-surface-glass);
+              backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+          }
+          /* Mask fade for content above footer */
+          .sheet-body::after {
+              content: ''; position: sticky; bottom: 0; left: 0; right: 0; height: 1px;
+          }
+
+            /* --- NEW QUANTITY SELECTOR STYLES (MATCHING DETAILS) --- */
             .qty-control {
                 display: flex;
                 align-items: center;
@@ -889,12 +1105,12 @@
                 border-radius: 20px;
                 padding: 4px;
                 height: 56px;
-                margin-bottom: 16px;
+                margin-bottom: 0; /* Handled by flex gap now */
                 border: 1px solid var(--border);
             }
             .qty-btn {
                 width: 48px; height: 48px;
-                background: #fff;
+                background: var(--bg-surface);
                 border-radius: 16px;
                 border: 1px solid var(--border);
                 display: flex; align-items: center; justify-content: center;
@@ -902,6 +1118,7 @@
                 color: var(--text-main);
                 box-shadow: 0 2px 8px rgba(0,0,0,0.05);
                 transition: 0.2s;
+                font-size: 1.2rem;
             }
             .qty-btn:active { transform: scale(0.9); }
             .qty-val {
@@ -916,7 +1133,7 @@
               background: var(--bg-surface-glass); backdrop-filter: blur(16px);
               border: 1px solid var(--border-strong); padding: 14px 28px;
               border-radius: 100px; display: flex; align-items: center; gap: 12px;
-              z-index: 6000; box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+              z-index: 6000; box-shadow: 0 15px 40px rgba(0,0,0,0.2);
               transition: transform 0.6s var(--ease-spring);
           }
           .toast.show { transform: translate(-50%, 0); }
@@ -959,7 +1176,7 @@
           .qr-overlay.visible .qr-pass-card { transform: translateY(0); }
           
           .qr-pass-header {
-              background: var(--text-main);
+              background: #000;
               color: #fff;
               padding: 24px;
               text-align: center;
@@ -968,7 +1185,8 @@
           }
           .qr-pass-header::before, .qr-pass-header::after {
               content: ''; position: absolute; bottom: -10px; width: 20px; height: 20px;
-              background: #000; border-radius: 50%; z-index: 2;
+              background: rgba(20,20,20,0.95); /* Matched to dark backdrop generally */
+              border-radius: 50%; z-index: 2;
           }
           /* Trick to match background color of overlay for cutouts */
           .qr-pass-header::before { left: -10px; box-shadow: inset -2px 0 0 rgba(255,255,255,0.1); } 
@@ -988,9 +1206,10 @@
           .qr-pass-footer {
               padding: 0 24px 24px;
               text-align: center;
+              color: #000;
           }
-          .qr-user-name { font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 4px; }
-          .qr-admit-label { font-family: var(--font-barcode); font-size: 2.5rem; color: var(--text-muted); opacity: 0.5; line-height: 1; }
+          .qr-user-name { font-weight: 700; font-size: 1.1rem; color: #000; margin-bottom: 4px; }
+          .qr-admit-label { font-family: var(--font-barcode); font-size: 2.5rem; color: #888; opacity: 0.5; line-height: 1; }
 
           .btn-close-qr {
               margin-top: 24px;
@@ -1009,8 +1228,8 @@
 
           /* Manual Code Styling */
           .manual-code-container { display: none; text-align: center; padding: 20px 0; animation: fadeIn 0.3s; }
-          .manual-code-text { font-family: var(--font-mono); font-size: 2rem; font-weight: 800; letter-spacing: 0.1em; color: var(--text-main); border: 2px dashed var(--border-strong); padding: 10px; border-radius: 12px; background: var(--bg-card-sub); word-break: break-all; }
-          .qr-help-btn { background: transparent; border: none; color: var(--text-sec); font-size: 0.85rem; font-weight: 600; text-decoration: underline; margin-top: 16px; cursor: pointer; }
+          .manual-code-text { font-family: var(--font-mono); font-size: 2rem; font-weight: 800; letter-spacing: 0.1em; color: #000; border: 2px dashed #ccc; padding: 10px; border-radius: 12px; background: #f8f8fa; word-break: break-all; }
+          .qr-help-btn { background: transparent; border: none; color: #555; font-size: 0.85rem; font-weight: 600; text-decoration: underline; margin-top: 16px; cursor: pointer; }
 
           /* --- TICKET NAV STYLES (NEW) --- */
           .ticket-nav {
@@ -1018,17 +1237,17 @@
               align-items: center;
               justify-content: space-between;
               padding: 0 24px 16px;
-              border-bottom: 1px solid var(--border);
+              border-bottom: 1px solid #eee;
               margin-bottom: 16px;
           }
           .ticket-nav-btn {
               width: 40px; height: 40px;
               border-radius: 50%;
-              background: var(--bg-card-sub);
-              border: 1px solid var(--border);
+              background: #f4f4f5;
+              border: 1px solid #ddd;
               display: flex; align-items: center; justify-content: center;
               cursor: pointer;
-              color: var(--text-main);
+              color: #000;
               transition: 0.2s;
           }
           .ticket-nav-btn:active { transform: scale(0.9); }
@@ -1038,14 +1257,14 @@
               font-family: var(--font-mono);
               font-weight: 700;
               font-size: 0.9rem;
-              color: var(--text-sec);
+              color: #555;
               text-transform: uppercase;
               letter-spacing: 0.05em;
           }
           
           /* Share Button in Ticket View */
           .ticket-share-btn {
-              background: var(--text-main); color: white;
+              background: #000; color: white;
               border: none; padding: 10px 24px; border-radius: 100px;
               font-weight: 700; font-size: 0.85rem;
               display: flex; align-items: center; gap: 8px;
@@ -1054,7 +1273,64 @@
           }
           .ticket-share-btn:active { transform: scale(0.95); }
           .ticket-share-btn.disabled {
-              background: var(--bg-dots); color: var(--text-muted); cursor: not-allowed;
+              background: #eee; color: #999; cursor: not-allowed;
+          }
+
+          /* --- IMMERSIVE DETAILS OVERRIDES --- */
+          #detailsModal .sheet {
+              overflow: hidden; /* Clip image to rounded corners */
+          }
+
+          #detailsModal .sheet-header-sticky {
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              background: transparent;
+              pointer-events: none;
+              padding-top: 20px;
+              z-index: 100;
+          }
+
+          #detailsModal .sheet-header-sticky > div {
+              pointer-events: auto;
+          }
+          
+          /* Hide "BACK" text in immersive view, update button */
+          #detailsModal .sheet-header-sticky span { display: none; }
+          #detailsModal .sheet-header-sticky button {
+              background: rgba(255, 255, 255, 0.9) !important;
+              backdrop-filter: blur(12px);
+              border: none !important;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+              width: 44px; height: 44px;
+              color: #000 !important; /* Force black icon for contrast on white button */
+          }
+          #detailsModal .sheet-handle {
+              position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+              background: rgba(255,255,255,0.4); z-index: 101;
+          }
+
+          #detailsModal .sheet-body {
+              padding: 0 !important;
+          }
+
+          .detail-content-wrapper {
+              padding: 32px 28px 48px;
+              position: relative;
+              background: var(--bg-surface);
+              border-radius: 32px 32px 0 0;
+              margin-top: -40px; /* Overlap image */
+              z-index: 10;
+              box-shadow: 0 -10px 30px rgba(0,0,0,0.05);
+          }
+
+          .detail-hero-container.immersive {
+              width: 100%;
+              height: 400px;
+              border-radius: 0;
+              margin-bottom: 0;
+              box-shadow: none;
           }
 
           /* =========================================
@@ -1062,8 +1338,8 @@
              ========================================= */
           #onboardingModal {
               position: fixed; inset: 0; 
-              /* Light Mode Frosted Glass Background */
-              background: rgba(242, 242, 244, 0.85); 
+              /* Light Mode Frosted Glass Background (Default) */
+              background: var(--bg-surface-glass); 
               backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
               z-index: 6000;
               display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -1073,13 +1349,13 @@
           
           .ob-content-card {
               /* Solid White Card with Premium Shadow */
-              background: #FFFFFF;
-              border: 1px solid rgba(0, 0, 0, 0.05);
+              background: var(--bg-surface);
+              border: 1px solid var(--border);
               padding: 40px 30px;
               border-radius: 32px;
               width: 88%; max-width: 380px;
               text-align: center;
-              box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15); /* Softer, lighter shadow */
+              box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3); /* Softer, lighter shadow */
               color: var(--text-main); /* Dark text */
               position: relative;
               overflow: hidden;
@@ -1100,7 +1376,7 @@
           .ob-img {
               width: 100%; height: 260px; object-fit: cover; border-radius: 24px;
               margin-bottom: 28px; 
-              box-shadow: 0 10px 30px rgba(0,0,0,0.08); /* Lighter shadow */
+              box-shadow: var(--shadow-md); /* Lighter shadow */
               border: 1px solid var(--border);
           }
           
@@ -1135,7 +1411,7 @@
           .btn-ob {
               width: 100%; height: 56px;
               background: var(--text-main); /* Black Button */
-              color: white;
+              color: var(--bg-body);
               border-radius: 16px; font-weight: 700; font-size: 1rem;
               border: none; cursor: pointer;
               box-shadow: 0 10px 25px rgba(0,0,0,0.1);
@@ -1154,6 +1430,27 @@
               text-transform: uppercase;
           }
           .btn-ob-skip:hover { color: var(--text-main); }
+
+          /* --- TOGGLE SWITCH (DARK MODE) --- */
+          .switch {
+              position: relative; display: inline-block; width: 44px; height: 24px;
+          }
+          .switch input { opacity: 0; width: 0; height: 0; }
+          .slider {
+              position: absolute; cursor: pointer; inset: 0;
+              background-color: var(--bg-dots); border-radius: 34px;
+              transition: .4s;
+          }
+          .slider:before {
+              position: absolute; content: "";
+              height: 20px; width: 20px; left: 2px; bottom: 2px;
+              background-color: white; border-radius: 50%;
+              transition: .4s var(--ease-spring);
+              box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+          }
+          input:checked + .slider { background-color: var(--accent); }
+          input:checked + .slider:before { transform: translateX(20px); }
+
     </style>
 </head>
 <body>
@@ -1323,17 +1620,17 @@
           
           <!-- Avatar Section -->
           <div style="text-align: center; margin-bottom: 24px;">
-              <div style="width: 100px; height: 100px; background: var(--bg-dots); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700; overflow:hidden; border:2px solid var(--border);" id="settingsAvatar"></div>
+              <div style="width: 100px; height: 100px; background: var(--bg-card-sub); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700; overflow:hidden; border:2px solid var(--border);" id="settingsAvatar"></div>
               <label style="background: var(--bg-card-sub); border: 1px solid var(--border); padding: 8px 16px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; cursor: pointer; color: var(--text-sec);">
                   Change Photo <input type="file" hidden accept="image/*" onchange="updateAvatar(this)">
               </label>
           </div>
 
           <!-- Profile Form -->
-          <form onsubmit="saveProfile(event)" style="background: white; padding: 24px; border-radius: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 24px;">
+          <form onsubmit="saveProfile(event)" style="background: var(--bg-card); padding: 24px; border-radius: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 24px;">
               
               <div class="form-section" style="margin-bottom: 20px;">
-                  <label class="form-label">Contact Info</label>
+                  <label class="form-label" style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 12px; letter-spacing: 0.05em;">Contact Info</label>
                   <div class="inp-group-icon" style="margin-bottom: 12px;">
                       <svg class="icon-sm" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                       <input type="text" id="pName" class="inp-plain" placeholder="Full Name" required>
@@ -1356,8 +1653,22 @@
           </form>
 
           <!-- Settings List -->
-          <div style="background: white; border-radius: 24px; overflow: hidden; border: 1px solid var(--border); margin-bottom:40px;">
+          <div style="background: var(--bg-card); border-radius: 24px; overflow: hidden; border: 1px solid var(--border); margin-bottom:40px;">
               
+              <!-- Dark Mode Toggle -->
+              <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                 <div style="display:flex; align-items:center; gap:12px;">
+                      <div style="width:32px; height:32px; background:var(--bg-card-sub); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                      </div>
+                      <span style="font-weight:600;">Dark Mode</span>
+                 </div>
+                 <label class="switch">
+                    <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode()">
+                    <span class="slider"></span>
+                 </label>
+              </div>
+
               <!-- App Info -->
               <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
                   <div style="display:flex; align-items:center; gap:12px;">
@@ -1366,7 +1677,7 @@
                       </div>
                       <span style="font-weight:600;">App Version</span>
                   </div>
-                  <span style="color: var(--text-muted); font-family: var(--font-mono);">v2.9.0</span>
+                  <span style="color: var(--text-muted); font-family: var(--font-mono);">v3.0.0</span>
               </div>
 
               <!-- About Company -->
@@ -1528,7 +1839,7 @@
         <div class="sheet-handle"></div>
         <div class="sheet-header-sticky">
              <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-                 <span style="font-weight:800; font-size:1.1rem;">FILTER EVENTS</span>
+                 <span style="font-weight:800; font-size:1.1rem; color:var(--text-main);">FILTER EVENTS</span>
                  <button onclick="closeFilterModal()" style="background:transparent; border:none; font-weight:700; color:var(--text-main); font-size:0.9rem;">DONE</button>
             </div>
         </div>
@@ -1598,7 +1909,7 @@
             date: '2026-03-15',
             time: '21:30',
             location: 'The Blue Note Basement, 123 Neon Ave, Downtown District, Metropolis, NY 10012',
-            price: 20,
+            price: 999,
             image: 'https://images.unsplash.com/photo-1514525253440-b393452e8d26?q=80&w=1974&auto=format&fit=crop',
             attendees: [],
             mode: 'offline',
@@ -1613,7 +1924,7 @@
             date: '2026-03-20',
             time: '19:00',
             location: 'Gallery 404, 88 Digital Lane, Tech Park, Sector 4, Silicon Valley, CA 94025',
-            price: 15,
+            price: 499,
             image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop',
             attendees: [],
             mode: 'offline',
@@ -1643,7 +1954,7 @@
             date: '2026-03-25',
             time: '16:00 EST',
             location: 'Online Event • Discord Server: #build-club-main • Server IP: mc.gigbycity.io',
-            price: 5,
+            price: 99,
             image: 'https://images.unsplash.com/photo-1607513168936-96c2e027d7de?q=80&w=2070&auto=format&fit=crop',
             attendees: [],
             mode: 'online',
@@ -1673,7 +1984,7 @@
             date: '2026-04-04',
             time: '23:00 - 05:00',
             location: 'Sky Lounge, Tower 9, 99th Floor, 1 Skyline Dr, Miami, FL 33130',
-            price: 45,
+            price: 2499,
             image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=2070&auto=format&fit=crop',
             attendees: [],
             mode: 'offline',
@@ -1690,7 +2001,11 @@
         events: JSON.parse(localStorage.getItem('fida_all_events')) || defaultEvents,
         passes: JSON.parse(localStorage.getItem('fida_passes')) || {},
         sharedTickets: JSON.parse(localStorage.getItem('fida_shared_tickets')) || {},
-        userLocation: null // { lat, lng }
+        userLocation: null, // { lat, lng }
+        // DARK MODE LOGIC: Check LocalStorage first, then System Preference
+        isDarkMode: localStorage.getItem('fida_dark_mode') !== null 
+            ? localStorage.getItem('fida_dark_mode') === 'true' 
+            : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
     };
 
     // Migration Logic: Convert old Array structure to new Object structure if needed
@@ -1726,8 +2041,43 @@
         localStorage.setItem('fida_all_events', JSON.stringify(state.events));
     }
 
+    // --- DARK MODE LOGIC (IMPROVED) ---
+    function applyTheme() {
+        if (state.isDarkMode) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+        
+        // Update Toggle Switch UI if it exists
+        const toggle = document.getElementById('darkModeToggle');
+        if (toggle) toggle.checked = state.isDarkMode;
+    }
+
+    function toggleDarkMode() {
+        state.isDarkMode = !state.isDarkMode;
+        localStorage.setItem('fida_dark_mode', state.isDarkMode);
+        applyTheme();
+    }
+    
+    // Listener for System Preference Changes
+    // This allows the app to switch automatically if the user changes device settings
+    // BUT only if they haven't explicitly set a preference in the app (optional behavior, here we respect user manual override primarily)
+    // To make it truly automatic when no override is present:
+    if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            // Only auto-switch if user hasn't manually set a preference yet
+            if (localStorage.getItem('fida_dark_mode') === null) {
+                state.isDarkMode = event.matches;
+                applyTheme();
+            }
+        });
+    }
+
     // --- INIT ---
     window.onload = () => {
+        applyTheme(); // Apply dark mode immediately to prevent flash
+
         setTimeout(() => {
             document.getElementById('splashScreen').style.opacity = '0';
             setTimeout(() => document.getElementById('splashScreen').classList.add('hidden'), 600);
@@ -1848,7 +2198,7 @@
         if (type === 'about') {
             content.innerHTML = `
                 <div style="text-align:center; margin-bottom:20px;">
-                    <div style="font-size:2.5rem; font-weight:800; margin-bottom:8px;">Kenbriselleris Inc.</div>
+                    <div style="font-size:2.5rem; font-weight:800; margin-bottom:8px; color:var(--text-main);">Kenbriselleris Inc.</div>
                     <div style="font-family:var(--font-mono); color:var(--text-muted); font-size:0.9rem;">EST. 2024</div>
                 </div>
                 <p style="line-height:1.6; color:var(--text-sec); margin-bottom:16px;">
@@ -1857,36 +2207,36 @@
                 <p style="line-height:1.6; color:var(--text-sec); margin-bottom:16px;">
                     Founded in the neon-lit sectors of the digital frontier, we build tools that empower creators, organizers, and communities to connect seamlessly.
                 </p>
-                <div style="background:var(--bg-card-sub); padding:16px; border-radius:12px; margin-top:20px;">
-                    <div style="font-weight:700; margin-bottom:4px;">Headquarters</div>
+                <div style="background:var(--bg-card-sub); padding:16px; border-radius:12px; margin-top:20px; border:1px solid var(--border);">
+                    <div style="font-weight:700; margin-bottom:4px; color:var(--text-main);">Headquarters</div>
                     <div style="color:var(--text-muted);">Sector 7, Tech District</div>
                 </div>
             `;
         } else if (type === 'privacy') {
             content.innerHTML = `
-                <h2 style="font-size:1.8rem; font-weight:800; margin-bottom:16px;">Privacy & Security</h2>
+                <h2 style="font-size:1.8rem; font-weight:800; margin-bottom:16px; color:var(--text-main);">Privacy & Security</h2>
                 <p style="line-height:1.6; color:var(--text-sec); margin-bottom:24px;">
                     Your data stays on the grid, but under your control. At GigByCity, we prioritize local-first architecture.
                 </p>
                 
-                <h4 style="font-weight:700; margin-bottom:8px;">1. Data Storage</h4>
+                <h4 style="font-weight:700; margin-bottom:8px; color:var(--text-main);">1. Data Storage</h4>
                 <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">
                     All user preferences, event passes, and hosting data are stored locally on your device via LocalStorage. We do not transmit your personal data to external servers.
                 </p>
 
-                <h4 style="font-weight:700; margin-bottom:8px;">2. Camera Access</h4>
+                <h4 style="font-weight:700; margin-bottom:8px; color:var(--text-main);">2. Camera Access</h4>
                 <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">
                     Camera access is required strictly for scanning QR codes during event check-in. No video feeds are recorded or sent to the cloud.
                 </p>
 
-                <h4 style="font-weight:700; margin-bottom:8px;">3. Anonymity</h4>
+                <h4 style="font-weight:700; margin-bottom:8px; color:var(--text-main);">3. Anonymity</h4>
                 <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">
                     You are free to use any alias. We do not verify government IDs, ensuring the underground remains underground.
                 </p>
             `;
         } else if (type === 'support') {
             content.innerHTML = `
-                <h2 style="font-size:1.8rem; font-weight:800; margin-bottom:16px;">Customer Support</h2>
+                <h2 style="font-size:1.8rem; font-weight:800; margin-bottom:16px; color:var(--text-main);">Customer Support</h2>
                 <p style="line-height:1.6; color:var(--text-sec); margin-bottom:24px;">
                     Need help with your account, tickets, or organizing an event? Our dedicated support team is available to assist you.
                 </p>
@@ -1899,7 +2249,7 @@
                 </div>
 
                 <div style="margin-top:32px; padding:0 10px;">
-                    <h4 style="font-weight:700; margin-bottom:12px; font-size:1.1rem;">Common Questions</h4>
+                    <h4 style="font-weight:700; margin-bottom:12px; font-size:1.1rem; color:var(--text-main);">Common Questions</h4>
                     <ul style="list-style:none; padding:0; color:var(--text-sec); line-height:1.8;">
                         <li style="margin-bottom:8px; display:flex; gap:10px;"><span style="color:var(--accent);">•</span> <span><strong>Refunds:</strong> Requests must be made at least 24h before the event starts.</span></li>
                         <li style="margin-bottom:8px; display:flex; gap:10px;"><span style="color:var(--accent);">•</span> <span><strong>App Issues:</strong> Try clearing your browser cache or reloading the app.</span></li>
@@ -1934,7 +2284,7 @@
                     const index = Array.from(slides).indexOf(entry.target);
                     // Only update if it's a manual interaction to avoid fighting the interval
                     // But we need to sync currentSlide so the next interval doesn't jump back
-                      currentSlide = index;
+                        currentSlide = index;
                     
                     // Reset all
                     slides.forEach(s => s.classList.remove('in-view'));
@@ -2051,6 +2401,10 @@
         document.getElementById('pEmail').value = state.user.email || '';
         document.getElementById('pPhone').value = state.user.phone || '';
         document.getElementById('pCity').value = state.user.city || '';
+        
+        // Update Dark Mode Switch state
+        const toggle = document.getElementById('darkModeToggle');
+        if(toggle) toggle.checked = state.isDarkMode;
     }
 
     function saveProfile(e) {
@@ -2181,8 +2535,8 @@
         }
     }
 
-    // --- TICKET SHARING LOGIC ---
-    function shareCurrentTicket() {
+    // --- TICKET SHARING LOGIC (UPDATED FOR IMAGE GENERATION) ---
+    async function shareCurrentTicket() {
         const ticketKey = `${currentQrEventId}_${currentTicketIndex}`;
         
         // Check if already shared
@@ -2194,37 +2548,309 @@
         const ev = state.events.find(e => e.id === currentQrEventId);
         if(!ev) return;
 
-        const baseUrl = window.location.origin + window.location.pathname;
-        // Create a unique share URL for this specific ticket
-        // Format: ?ticket=eventId_index
-        const shareUrl = `${baseUrl}?ticket=${ticketKey}`;
+        // 1. Get the QR Code Image Source (Robust Check)
+        const qrContainer = document.getElementById('qrModalTarget');
+        let qrSrc = null;
         
-        const shareData = {
-            title: `Ticket for ${ev.title}`,
-            text: `Here is my Ticket #${currentTicketIndex + 1} for ${ev.title}. Scan at the door!`,
-            url: shareUrl
-        };
-
-        if (navigator.share) {
-            navigator.share(shareData)
-                .then(() => {
-                    markTicketAsShared(ticketKey);
-                })
-                .catch((error) => console.log('Error sharing', error));
+        // Check for IMG tag
+        const qrImgTag = qrContainer.querySelector('img');
+        if (qrImgTag && qrImgTag.src) {
+            qrSrc = qrImgTag.src;
         } else {
-            // Fallback
-            const textArea = document.createElement("textarea");
-            textArea.value = shareUrl;
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                markTicketAsShared(ticketKey);
-                showToast('Ticket link copied!');
-            } catch (err) {
-                showToast('Failed to copy');
+            // Check for CANVAS tag (Common on some mobile browsers)
+            const qrCanvas = qrContainer.querySelector('canvas');
+            if (qrCanvas) {
+                qrSrc = qrCanvas.toDataURL("image/png");
             }
-            document.body.removeChild(textArea);
+        }
+        
+        if (!qrSrc) {
+            showToast('QR not ready. Please wait...');
+            return;
+        }
+
+        const shareBtn = document.getElementById('ticketShareBtn');
+        const originalText = shareBtn.innerHTML;
+        shareBtn.innerHTML = 'Generating...';
+        shareBtn.disabled = true;
+
+        try {
+            // 2. Generate the Composite Image Blob
+            // NOTE: Speed is crucial here. Browser share APIs expire if execution takes too long.
+            const blob = await generateCompositeTicket(ev, currentTicketIndex, qrSrc);
+            
+            if (!blob) throw new Error('Image generation failed');
+
+            const file = new File([blob], `GigByCity-Ticket-${currentTicketIndex + 1}.png`, { type: "image/png" });
+            const title = `Ticket: ${ev.title}`;
+            const text = `Here is my Ticket #${currentTicketIndex + 1} for ${ev.title}. Scan at the door!`;
+
+            // 3. Try Native File Sharing (Mobile/Supported Browsers)
+            // This opens the system sheet where WhatsApp, Telegram, etc. live
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: title,
+                    text: text
+                });
+                markTicketAsShared(ticketKey);
+                showToast('Shared successfully!');
+            } 
+            // 4. Fallback: Copy Image to Clipboard (Desktop/WhatsApp Web)
+            else if (typeof ClipboardItem !== 'undefined' && navigator.clipboard && navigator.clipboard.write) {
+                await navigator.clipboard.write([
+                    new ClipboardItem({
+                        [blob.type]: blob
+                    })
+                ]);
+                markTicketAsShared(ticketKey);
+                showToast('Image Copied! Paste into WhatsApp.');
+            }
+            // 5. Final Fallback: Download Image
+            else {
+                throw new Error('Sharing not supported');
+            }
+
+        } catch (error) {
+            console.log('Share unavailable, downloading:', error);
+            
+            // Download Logic
+            try {
+                const blob = await generateCompositeTicket(ev, currentTicketIndex, qrSrc);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `GigByCity-Ticket-${ev.title.replace(/\s+/g, '-')}-${currentTicketIndex+1}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                markTicketAsShared(ticketKey);
+                
+                // Construct a WhatsApp Text Link as a backup since we can't auto-open image share
+                const baseUrl = window.location.origin + window.location.pathname;
+                const shareUrl = `${baseUrl}?ticket=${ticketKey}`;
+                const waText = `Here is my Ticket for ${ev.title}. I've attached the image above! Link: ${shareUrl}`;
+                const waLink = `https://wa.me/?text=${encodeURIComponent(waText)}`;
+                
+                // Show a helpful toast with an action
+                const t = document.getElementById('toast');
+                t.innerHTML = `
+                    <div style="display:flex; flex-direction:column; gap:4px; width:100%;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div class="toast-icon"></div>
+                            <span style="font-weight:700;">Image Saved!</span>
+                        </div>
+                        <a href="${waLink}" target="_blank" style="color:var(--accent); font-size:0.8rem; font-weight:700; text-decoration:none; margin-left:20px;">
+                            OPEN WHATSAPP & SEND ↗
+                        </a>
+                    </div>
+                `;
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 6000);
+
+            } catch (e) {
+                console.error(e);
+                showToast('Could not generate ticket');
+            }
+        } finally {
+            shareBtn.innerHTML = originalText;
+            shareBtn.disabled = false;
+        }
+    }
+
+    // Helper: Generate the Cool Ticket Template on Canvas
+    function generateCompositeTicket(event, ticketIndex, qrSrc) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const width = 800;
+            const height = 1400; // Taller card format
+            canvas.width = width;
+            canvas.height = height;
+
+            // --- 1. Background & Texture ---
+            const grd = ctx.createLinearGradient(0, 0, width, height);
+            grd.addColorStop(0, '#09090b'); // Almost black
+            grd.addColorStop(1, '#18181b'); // Dark Zinc
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, width, height);
+
+            // Tech Grid Pattern
+            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 1;
+            const gridSize = 40;
+            for(let x=0; x<width; x+=gridSize) {
+                ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,height); ctx.stroke();
+            }
+            for(let y=0; y<height; y+=gridSize) {
+                ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke();
+            }
+            
+            // Add subtle noise texture pattern (OPTIMIZED FOR SPEED)
+            // Reduced iteration count by 25x for instant generation
+            ctx.fillStyle = 'rgba(255,255,255,0.04)';
+            for(let i=0; i<width; i+=20) {
+                for(let j=0; j<height; j+=20) {
+                    if(Math.random() > 0.6) ctx.fillRect(i, j, 2, 2);
+                }
+            }
+
+            // --- 2. Decorative Header ---
+            // Top Accent Line
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(40, 40, width - 80, 8); 
+
+            // Brand Name
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 32px "Space Grotesk", sans-serif';
+            ctx.textAlign = 'center';
+            // Manual letter spacing sim (canvas support varies)
+            ctx.fillText('GIGBYCITY', width / 2, 100);
+            
+            // "OFFICIAL ACCESS PASS" Label
+            ctx.fillStyle = '#52525b';
+            ctx.font = '700 20px "JetBrains Mono", monospace';
+            ctx.fillText('OFFICIAL ACCESS PASS', width / 2, 130);
+
+            // --- 3. Event Details ---
+            // Title
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '800 72px "Space Grotesk", sans-serif';
+            ctx.textAlign = 'center';
+            // Shadow for depth
+            ctx.shadowColor = "rgba(239, 68, 68, 0.5)";
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 4;
+            ctx.shadowOffsetY = 4;
+            
+            const titleUpper = event.title.toUpperCase();
+            wrapText(ctx, titleUpper, width/2, 240, 700, 80);
+            
+            // Reset Shadow
+            ctx.shadowColor = "transparent";
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+
+            // Date & Time Box
+            const dtY = 400;
+            ctx.fillStyle = 'rgba(255,255,255,0.05)';
+            ctx.fillRect(100, dtY, 600, 80);
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(100, dtY, 600, 80);
+
+            ctx.fillStyle = '#ef4444';
+            ctx.font = '700 36px "JetBrains Mono", monospace';
+            const dateStr = `${formatDate(event.date)} • ${event.time}`;
+            ctx.fillText(dateStr.toUpperCase(), width/2, dtY + 52);
+
+            // --- 4. QR Code Section ---
+            const qrBgY = 560;
+            const qrBgSize = 560;
+            const qrBgX = (width - qrBgSize) / 2;
+            
+            // White Card for QR
+            ctx.fillStyle = '#ffffff';
+            // Rounded Rect manual
+            const r = 32;
+            ctx.beginPath();
+            ctx.moveTo(qrBgX + r, qrBgY);
+            ctx.lineTo(qrBgX + qrBgSize - r, qrBgY);
+            ctx.quadraticCurveTo(qrBgX + qrBgSize, qrBgY, qrBgX + qrBgSize, qrBgY + r);
+            ctx.lineTo(qrBgX + qrBgSize, qrBgY + qrBgSize - r);
+            ctx.quadraticCurveTo(qrBgX + qrBgSize, qrBgY + qrBgSize, qrBgX + qrBgSize - r, qrBgY + qrBgSize);
+            ctx.lineTo(qrBgX + r, qrBgY + qrBgSize);
+            ctx.quadraticCurveTo(qrBgX, qrBgY + qrBgSize, qrBgX, qrBgY + qrBgSize - r);
+            ctx.lineTo(qrBgX, qrBgY + r);
+            ctx.quadraticCurveTo(qrBgX, qrBgY, qrBgX + r, qrBgY);
+            ctx.closePath();
+            ctx.fill();
+
+            // Corner Brackets (Viewfinder look) around QR box
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 8;
+            const cornerLen = 60;
+            const gap = 20; // gap from white box
+            
+            // TL
+            ctx.beginPath(); ctx.moveTo(qrBgX - gap, qrBgY - gap + cornerLen); ctx.lineTo(qrBgX - gap, qrBgY - gap); ctx.lineTo(qrBgX - gap + cornerLen, qrBgY - gap); ctx.stroke();
+            // TR
+            ctx.beginPath(); ctx.moveTo(qrBgX + qrBgSize + gap - cornerLen, qrBgY - gap); ctx.lineTo(qrBgX + qrBgSize + gap, qrBgY - gap); ctx.lineTo(qrBgX + qrBgSize + gap, qrBgY - gap + cornerLen); ctx.stroke();
+            // BL
+            ctx.beginPath(); ctx.moveTo(qrBgX - gap, qrBgY + qrBgSize + gap - cornerLen); ctx.lineTo(qrBgX - gap, qrBgY + qrBgSize + gap); ctx.lineTo(qrBgX - gap + cornerLen, qrBgY + qrBgSize + gap); ctx.stroke();
+            // BR
+            ctx.beginPath(); ctx.moveTo(qrBgX + qrBgSize + gap - cornerLen, qrBgY + qrBgSize + gap); ctx.lineTo(qrBgX + qrBgSize + gap, qrBgY + qrBgSize + gap); ctx.lineTo(qrBgX + qrBgSize + gap, qrBgY + qrBgSize + gap - cornerLen); ctx.stroke();
+
+            // Load QR Image
+            const img = new Image();
+            if (!qrSrc.startsWith('data:')) { img.crossOrigin = "Anonymous"; }
+            
+            img.onload = () => {
+                // Draw QR
+                const qrPadding = 40;
+                ctx.drawImage(img, qrBgX + qrPadding, qrBgY + qrPadding, qrBgSize - (qrPadding*2), qrBgSize - (qrPadding*2));
+                
+                // --- 5. User & Ticket Info ---
+                const infoY = 1200;
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '800 48px "Space Grotesk", sans-serif';
+                ctx.fillText(state.user.name.toUpperCase(), width/2, infoY);
+
+                ctx.fillStyle = '#a1a1aa';
+                ctx.font = 'bold 32px "JetBrains Mono", monospace';
+                const totalTix = state.passes[event.id] || 1;
+                ctx.fillText(`TICKET ID: ${ticketIndex + 1}/${totalTix.toString().padStart(2,'0')}`, width/2, infoY + 50);
+                
+                // Decorative Barcode at bottom
+                drawBarcode(ctx, 100, 1320, 600, 40);
+
+                canvas.toBlob(blob => resolve(blob), 'image/png');
+            };
+            img.onerror = (e) => {
+                console.error("QR Load Failed", e);
+                resolve(null);
+            };
+            img.src = qrSrc;
+        });
+    }
+
+    // Helper for barcode
+    function drawBarcode(ctx, x, y, w, h) {
+        ctx.fillStyle = '#ffffff';
+        let currentX = x;
+        while(currentX < x + w) {
+            const thickness = Math.random() * 6 + 2;
+            if(currentX + thickness > x + w) break;
+            if(Math.random() > 0.3) {
+                ctx.fillRect(currentX, y, thickness, h);
+            }
+            currentX += thickness + 4;
+        }
+    }
+
+    // Helper for wrapping text on canvas
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+        const words = text.split(' ');
+        let line = '';
+        let lineArray = [];
+
+        for(let n = 0; n < words.length; n++) {
+            let testLine = line + words[n] + ' ';
+            let metrics = ctx.measureText(testLine);
+            let testWidth = metrics.width;
+            if (testWidth > maxWidth && n > 0) {
+                lineArray.push([line, x, y]);
+                line = words[n] + ' ';
+                y += lineHeight;
+            } else {
+                line = testLine;
+            }
+        }
+        lineArray.push([line, x, y]);
+        for (let i = 0; i < lineArray.length; i++) {
+            ctx.fillText(lineArray[i][0], lineArray[i][1], lineArray[i][2]);
         }
     }
 
@@ -2301,11 +2927,18 @@
             const isOnline = event.mode === 'online';
             const locIcon = isOnline ? '🌐' : '📍';
             
-            // Format Distance String
-            let distString = '';
-            if(isOnline) distString = 'Online';
-            else if (event.distance === Infinity) distString = 'Unknown Dist';
-            else distString = `${event.distance.toFixed(1)} km`;
+            // Format Location/Distance Display
+            let locDisplay = '';
+            // Simple extraction of venue name (everything before first comma)
+            let venueName = event.location.split(',')[0];
+            
+            if(isOnline) {
+                locDisplay = 'Online Event';
+            } else if (event.distance !== Infinity) {
+                locDisplay = `${event.distance.toFixed(1)} km • ${venueName}`;
+            } else {
+                locDisplay = venueName; // Fallback to just venue name if distance unknown
+            }
 
             const count = event.attendees ? event.attendees.length : 0;
             const max = event.maxAttendees || Infinity;
@@ -2345,8 +2978,8 @@
                             <div class="t-header">
                                 <div class="t-title">${event.title}</div>
                                 <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                                    <div class="t-loc interactive" onclick="openMap('${safeLoc}', event)" title="Open in Google Maps">${locIcon} ${distString}</div>
-                                    <div class="t-loc" style="background:var(--border);">${event.category || 'EVENT'}</div>
+                                    <div class="t-loc interactive" onclick="openMap('${safeLoc}', event)" title="Open in Google Maps">${locIcon} ${locDisplay}</div>
+                                    <div class="t-loc" style="background:var(--bg-card-sub);">${event.category || 'EVENT'}</div>
                                 </div>
                             </div>
                             <div class="t-desc">${event.desc}</div>
@@ -2354,7 +2987,7 @@
                                 <div class="t-cell"><label>Date</label><div>${formatDate(event.date)}</div></div>
                                 <div class="t-cell"><label>Time</label><div>${event.time}</div></div>
                                 <div class="t-cell"><label>Spots Left</label><div>${displayLabel}</div></div>
-                                <div class="t-cell t-price"><div>${event.price === 0 ? 'FREE' : '$'+event.price}</div></div>
+                                <div class="t-cell t-price"><div>${event.price === 0 ? 'FREE' : '₹'+event.price}</div></div>
                             </div>
                         </div>
                         <div class="ticket-rip">
@@ -2593,7 +3226,7 @@
         const price = parseFloat(btn.getAttribute('data-price'));
         const total = price * purchaseQty;
         
-        btn.innerHTML = `BUY ${purchaseQty} TICKET${purchaseQty > 1 ? 'S' : ''} • ${total === 0 ? 'FREE' : '$' + total}`;
+        btn.innerHTML = `BUY ${purchaseQty} TICKET${purchaseQty > 1 ? 'S' : ''} • ${total === 0 ? 'FREE' : '₹' + total}`;
     }
 
     function buyTickets(id) {
@@ -2691,7 +3324,7 @@
                     </div>
                     
                     <button id="buyBtn" data-price="${event.price}" class="btn-main" onclick="buyTickets('${event.id}')" style="width:100%; margin-top:0;">
-                         BUY 1 TICKET • ${initialTotal === 0 ? 'FREE' : '$' + initialTotal}
+                         BUY 1 TICKET • ${initialTotal === 0 ? 'FREE' : '₹' + initialTotal}
                     </button>
                 </div>
              `;
@@ -2704,57 +3337,61 @@
         const safeLoc = event.location.replace(/'/g, "\\'");
 
         content.innerHTML = `
-            <div class="detail-hero-container">
+            <div class="detail-hero-container immersive">
                 <img src="${event.image}" class="detail-hero-img">
-                <div class="detail-badge">${event.category || 'EVENT'}</div>
+                <div class="detail-badge-floating" style="top:auto; bottom:60px; left:28px;">${event.category || 'EVENT'}</div>
             </div>
 
-            <h2 style="font-size:2.4rem; font-weight:800; line-height:1.1; margin-bottom:12px; letter-spacing:-0.03em;">${event.title}</h2>
-            
-            <div class="detail-info-row">
-                <div style="display:flex; align-items:center; gap:6px;">
-                      <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                      ${formatDate(event.date)}
-                </div>
-                <div style="width:1px; height:16px; background:var(--border-strong);"></div>
-                <div style="display:flex; align-items:center; gap:6px;">
-                      <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                      ${event.time}
-                </div>
-            </div>
-
-            <div class="detail-stat-grid">
-                <div class="detail-stat-card">
-                    <div class="detail-stat-label">Location</div>
-                    <div class="detail-stat-value map-link" onclick="openMap('${safeLoc}')" title="Get Directions">
-                        ${event.location}
-                        <svg class="icon-sm map-icon-suffix" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            <div class="detail-content-wrapper">
+                <h2 class="detail-title-large">${event.title}</h2>
+                
+                <div class="detail-meta-flex">
+                    <div class="detail-meta-item">
+                          <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                          ${formatDate(event.date)}
+                    </div>
+                    <div class="detail-meta-dot"></div>
+                    <div class="detail-meta-item">
+                          <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                          ${event.time}
                     </div>
                 </div>
-                <div class="detail-stat-card">
-                    <div class="detail-stat-label">Availability</div>
-                    <div class="detail-stat-value">${max === Infinity ? 'Open' : (max - count) + ' / ' + max} Left</div>
-                </div>
-                 <div class="detail-stat-card">
-                    <div class="detail-stat-label">Price</div>
-                    <div class="detail-stat-value" style="color:var(--accent);">${event.price === 0 ? 'FREE' : '$'+event.price}</div>
-                </div>
-                 <div class="detail-stat-card">
-                    <div class="detail-stat-label">Status</div>
-                    <div class="detail-stat-value">${isOnline ? 'Online' : 'In Person'}</div>
-                </div>
-            </div>
 
-            <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">About Event</h3>
-            <p class="detail-description">${event.desc}</p>
+                <div class="detail-map-card" onclick="openMap('${safeLoc}')">
+                    <div class="map-icon-box">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    </div>
+                    <div class="map-info">
+                        <div class="map-label">Location</div>
+                        <div class="map-address">${event.location}</div>
+                    </div>
+                    <div class="map-arrow">
+                        <svg class="icon" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+                    </div>
+                </div>
 
-            <!-- Actions -->
-            <div style="display:flex; flex-direction:column; gap:12px; position:sticky; bottom:0; background:var(--bg-surface); padding-top:20px; border-top:1px solid var(--border);">
-                ${btnHtml}
+                <div class="detail-stats-grid">
+                    <div class="stat-pill">
+                        <div class="stat-val">${max === Infinity ? '∞' : (max - count)}</div>
+                        <div class="stat-lbl">SPOTS LEFT</div>
+                    </div>
+                     <div class="stat-pill">
+                        <div class="stat-val" style="color:var(--accent);">${event.price === 0 ? 'FREE' : '₹'+event.price}</div>
+                        <div class="stat-lbl">PRICE</div>
+                    </div>
+                </div>
+
+                <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px; color:var(--text-main);">About Event</h3>
+                <p class="detail-desc-text">${event.desc}</p>
                 
-                <button class="btn-main" onclick="${shareAction}" style="width:100%; background:var(--bg-card-sub); color:var(--text-main); box-shadow:none; border:1px solid var(--border-strong); margin-top:0; height:48px; font-size:0.9rem;">
-                    SHARE EVENT <svg class="icon-sm" style="margin-left:8px;" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
-                </button>
+                <!-- Sticky Footer Action Bar -->
+                <div class="detail-sticky-footer">
+                    ${btnHtml}
+                    
+                    <button class="btn-main" onclick="${shareAction}" style="width:100%; background:var(--bg-card-sub); color:var(--text-main); box-shadow:none; border:1px solid var(--border-strong); margin-top:0; height:48px; font-size:0.9rem;">
+                        SHARE EVENT <svg class="icon-sm" style="margin-left:8px;" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                    </button>
+                </div>
             </div>
         `;
         
