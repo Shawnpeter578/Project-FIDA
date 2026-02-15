@@ -50,6 +50,12 @@ FidaAPI = {
             return await res.json();
         },
 
+        async getOne(id) {
+            const res = await fetch(`${FidaAPI.BASE_URL}/events/${id}`);
+            if (!res.ok) throw new Error('Event not found');
+            return await res.json();
+        },
+
         async create(formData) {
             // Note: Do not set Content-Type for FormData; browser sets boundary automatically
             const res = await fetch(`${FidaAPI.BASE_URL}/events`, {
@@ -60,11 +66,11 @@ FidaAPI = {
             return await res.json();
         },
 
-        async join(eventId) {
+        async join(eventId, quantity = 1) {
             const res = await fetch(`${FidaAPI.BASE_URL}/events/join`, {
                 method: 'POST',
                 headers: FidaAPI.getHeaders(),
-                body: JSON.stringify({ eventId })
+                body: JSON.stringify({ eventId, quantity })
             });
             return await res.json();
         },

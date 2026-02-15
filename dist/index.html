@@ -460,7 +460,8 @@
     let html5QrcodeScanner = null;
     let currentSearch = '';
     let currentFilter = 'ALL';
-    let currentQuantity = 1; // New
+    let currentQuantity = 1; 
+    let currentMaxQty = 10;
     let currentEventPrice = 0; // New
     
     // Carousel Vars
@@ -497,7 +498,7 @@
     function updateQuantity(change) {
         let newQty = currentQuantity + change;
         if (newQty < 1) newQty = 1;
-        if (newQty > 10) newQty = 10;
+        if (newQty > currentMaxQty) newQty = currentMaxQty;
         currentQuantity = newQty;
         
         document.getElementById('qtyCount').innerText = currentQuantity;
@@ -523,12 +524,17 @@
             updateUserUI();
             fetchAndRenderFeed();
             
-            // Logic to show onboarding if user has no events (assumption: new user)
+            // Logic to show onboarding if user has no events
             if(joinedEventIds.length === 0) {
                  setTimeout(() => showOnboarding(), 500);
             }
 
-            switchView('home', document.querySelector('.dock-item:first-child'));
+            const params = new URLSearchParams(window.location.search);
+            if(params.get('view') === 'passes') {
+                switchView('passes', document.querySelectorAll('.dock-item')[1]);
+            } else {
+                switchView('home', document.querySelector('.dock-item:first-child'));
+            }
 
         } catch (e) {
             console.error("Auth check failed", e);
@@ -824,7 +830,7 @@
 
             // Determine Button State
             let btnLabel = isJoined ? 'GOT PASS' : (isSoldOut ? 'FULL' : 'GET PASS');
-            let btnAction = `event.stopPropagation(); ${isJoined ? `openDetail('${id}')` : `openDetail('${id}')`}`;
+            let btnAction = `event.stopPropagation(); window.location.href='event.html?id=${id}'`;
             let btnClass = isSoldOut && !isJoined ? 'sold-out' : '';
 
             if (isHost) {
@@ -834,7 +840,7 @@
             }
 
             const html = `
-                <div class="ticket ${isJoined ? 'joined' : ''}" onclick="openDetail('${id}')">
+                <div class="ticket ${isJoined ? 'joined' : ''}" onclick="window.location.href='event.html?id=${id}'">
                     <div class="ticket-inner">
                         <div class="ticket-status-bar"></div>
                         ${badgeHtml}
@@ -1084,9 +1090,31 @@
     }
 
     async function joinClub(id) {
+        const event = currentEvents.find(e => (e._id || e.id) === id);
+        if(!event) return;
+
         try {
+            // Logic: Handle Free Events
+            if (!event.price || event.price === 0) {
+                showToast('Joining...');
+                const data = await FidaAPI.events.join(id, currentQuantity);
+                
+                if(data.success) {
+                    showToast('Joined Successfully!');
+                    joinedEventIds.push(id);
+                    fetchAndRenderFeed();
+                    if(document.getElementById('detailsModal').classList.contains('visible')) {
+                        openDetail(id);
+                    }
+                } else {
+                    showToast(data.error || 'Failed to join');
+                }
+                return;
+            }
+
+            // Logic: Handle Paid Events
             showToast('Initializing payment...');
-            const orderData = await FidaAPI.events.createOrder(id, currentQuantity); // Updated to pass Qty
+            const orderData = await FidaAPI.events.createOrder(id, currentQuantity); 
             
             if (!orderData.success) {
                 showToast(orderData.error || 'Order creation failed');
@@ -1107,7 +1135,7 @@
                         razorpay_payment_id: response.razorpay_payment_id,
                         razorpay_signature: response.razorpay_signature,
                         eventId: id,
-                        quantity: currentQuantity // <--- Passed to verification
+                        quantity: currentQuantity 
                     });
 
                     if (verifyRes.success) {
@@ -1160,8 +1188,15 @@
         const priceDisplay = (!event.price) ? 'FREE' : `₹${event.price}`;
         const hostName = (!event.creatorName) ? 'Unknown' : event.creatorName;
 
+        // Logic: Calculate User Tickets & Max Qty
+        let myTicketCount = 0;
+        if(event.attendees && currentUser) {
+            myTicketCount = event.attendees.filter(a => a.userId === currentUser._id).length;
+        }
+        currentMaxQty = 10 - myTicketCount;
+
         let qtySelectorHtml = '';
-        if(!isJoined && !isSoldOut) {
+        if(!isSoldOut && currentMaxQty > 0) {
              qtySelectorHtml = `
                  <div class="quantity-control" style="background:var(--bg-body); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-weight:700;">Tickets</span>
@@ -1173,6 +1208,26 @@
                     <span id="qtyTotal" style="font-weight:800; min-width:60px; text-align:right;">${priceDisplay}</span>
                  </div>
              `;
+        }
+
+        // Logic: Button Text & State
+        let btnText = 'GET PASS';
+        let btnDisabled = false;
+        let btnClass = '';
+        let btnAction = `joinClub('${id}')`;
+
+        if (myTicketCount >= 10) {
+            btnText = 'MAX LIMIT REACHED';
+            btnDisabled = true;
+            btnClass = 'sold-out';
+            btnAction = '';
+        } else if (isSoldOut) {
+            btnText = 'SOLD OUT';
+            btnDisabled = true;
+            btnClass = 'sold-out';
+            btnAction = '';
+        } else if (myTicketCount > 0) {
+            btnText = 'BUY MORE';
         }
 
         content.innerHTML = `
@@ -1193,8 +1248,8 @@
             
             ${qtySelectorHtml}
 
-            <button class="btn-main ${isSoldOut && !isJoined ? 'sold-out' : ''}" onclick="${isJoined ? '' : `joinClub('${id}')`}">
-                ${isJoined ? 'ALREADY JOINED' : (isSoldOut ? 'SOLD OUT' : `GET PASS`)}
+            <button class="btn-main ${btnClass}" onclick="${btnAction}" ${btnDisabled ? 'disabled' : ''}>
+                ${btnText}
             </button>
         `;
         

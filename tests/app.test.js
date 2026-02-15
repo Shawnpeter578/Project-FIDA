@@ -148,8 +148,17 @@ const mockCollection = (collectionName) => ({
                       // We need to find the item in doc[arrayField] that matches the query part related to it.
                       
                       // Simplification for the test case:
-                      const ticketIdQuery = query["attendees.ticketId"];
-                      const userIdQuery = query["attendees.userId"];
+                      let ticketIdQuery = query["attendees.ticketId"];
+                      // Handle $elemMatch for ticketId
+                      if (!ticketIdQuery && query.attendees && query.attendees.$elemMatch) {
+                          ticketIdQuery = query.attendees.$elemMatch.ticketId;
+                      }
+
+                      let userIdQuery = query["attendees.userId"];
+                      // Handle $elemMatch for userId
+                      if (!userIdQuery && query.attendees && query.attendees.$elemMatch) {
+                          userIdQuery = query.attendees.$elemMatch.userId;
+                      }
                       
                       const itemIndex = doc[arrayField].findIndex(item => {
                           if (ticketIdQuery) return item.ticketId === ticketIdQuery;
@@ -298,6 +307,13 @@ describe('API Integration Flow', () => {
     eventId = res.body.eventId;
   });
 
+  test('GET /api/events/:id (Public Event Detail)', async () => {
+    const res = await request(app).get(`/api/events/${eventId}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.title).toBe("Test Event");
+    expect(res.body.price).toBe(100);
+  });
+
   test('POST /api/events/create-order (User can initiate payment for multiple)', async () => {
     const res = await request(app)
       .post('/api/events/create-order')
@@ -309,6 +325,26 @@ describe('API Integration Flow', () => {
     expect(res.body.quantity).toBe(2);
     // Price was 100, so 2 tickets = 200 * 100 paise = 20000
     expect(res.body.amount).toBe(20000); 
+  });
+
+  test('POST /api/events/create-order (Quota Limit Exceeded)', async () => {
+    const res = await request(app)
+      .post('/api/events/create-order')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ eventId, quantity: 11 }); // Max 10
+
+    expect(res.statusCode).toBe(400);
+    // Depending on logic, error might be "Invalid quantity (1-10)" or "Limit reached..."
+    // Given the endpoint logic, if input is 11, it fails quantity check (1-10).
+    // If input is 9 but user has 2, total > 10, it fails limit check.
+    // Let's test both if possible or verify the 11 quantity error.
+    expect(res.body.error).toMatch(/Invalid quantity/); 
+    
+    // Test cumulative limit
+    // User already has 0 tickets at this point in flow (payment pending). 
+    // Wait, create-order doesn't increment count until verified.
+    // So 'Limit reached' check relies on verified tickets.
+    // However, verify-payment logic checks count.
   });
 
   test('POST /api/events/verify-payment (User can join with multiple tickets)', async () => {
@@ -332,6 +368,17 @@ describe('API Integration Flow', () => {
       });
 
     expect(res.statusCode).toBe(200);
+  });
+
+  test('POST /api/events/create-order (Quota Limit Reached)', async () => {
+    // User now has 2 tickets. Trying to buy 9 should fail (2+9=11 > 10).
+    const res = await request(app)
+      .post('/api/events/create-order')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ eventId, quantity: 9 });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toMatch(/Limit reached/);
   });
   
   test('GET /api/events (Verify Multiple Tickets)', async () => {
@@ -457,6 +504,39 @@ describe('API Integration Flow', () => {
     const fetchRes = await request(app).get('/api/events');
     const event = fetchRes.body.find(e => e._id.toString() === eventId.toString());
     expect(event).toBeUndefined();
+  });
+
+  test('POST /api/events (Organizer creates Free Event)', async () => {
+    const res = await request(app)
+      .post('/api/events')
+      .set('Authorization', `Bearer ${organizerToken}`)
+      .send({
+        title: "Free Event",
+        date: "2023-12-26",
+        time: "10:00",
+        location: "Free Loc",
+        category: "Social",
+        description: "Free Desc",
+        price: 0 // Free
+      });
+
+    expect(res.statusCode).toBe(201);
+    eventId = res.body.eventId; // Reuse variable
+  });
+
+  test('POST /api/events/join (User joins Free Event with multiple tickets)', async () => {
+    const res = await request(app)
+      .post('/api/events/join')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ eventId, quantity: 3 });
+
+    expect(res.statusCode).toBe(200);
+    
+    // Verify
+    const fetchRes = await request(app).get(`/api/events/${eventId}`);
+    const event = fetchRes.body; // fetching single event by ID returns object directly, not array
+    const userTickets = event.attendees.filter(a => a.userId === userId);
+    expect(userTickets.length).toBe(3);
   });
 
   test('POST /api/auth/logout (Sign Out)', async () => {

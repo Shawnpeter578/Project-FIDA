@@ -43,6 +43,28 @@ router.get('/', async (req, res) => {
     }
 });
 
+router.get('/:id', async (req, res) => {
+    try {
+        const eventsCollection = getEventsCollection();
+        const eventId = req.params.id;
+
+        if (!ObjectId.isValid(eventId)) {
+             return res.status(400).json({ error: "Invalid ID" });
+        }
+
+        const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) });
+        
+        if (!event) {
+            return res.status(404).json({ error: "Event not found" });
+        }
+
+        res.status(200).json(event);
+    } catch (e) {
+        console.error("Single Event Fetch Error:", e);
+        res.status(500).json({ error: "Fetch failed" });
+    }
+});
+
 // ==============================================================================
 // POST PATHS
 // ==============================================================================
@@ -66,7 +88,7 @@ router.post('/', authenticateJWT, upload.single('image'), async (req, res) => {
             if (isNaN(maxAttendees)) maxAttendees = 100;
         }
 
-        if (!title || !date || !price) {
+        if (!title || !date || price === undefined || price === null) {
             if (req.file) fs.unlinkSync(req.file.path);
             return res.status(400).json({ error: "Missing required fields (title, date, price)" });
         }
@@ -181,9 +203,13 @@ router.post('/create-order', authenticateJWT, async (req, res) => {
 
         if (!event) return res.status(404).json({ error: "Event not found" });
 
-        // Check if already joined (Optional: We allow buying more, but maybe limit total per user?)
-        // For now, removing "Already joined" check to allow multi-buy. 
-        // Logic: Check capacity
+        // Logic: Check User Quota (Max 10)
+        const userTicketCount = event.attendees ? event.attendees.filter(a => a.userId === req.userId).length : 0;
+        if (userTicketCount + quantity > 10) {
+            return res.status(400).json({ error: `Limit reached. You can only buy ${Math.max(0, 10 - userTicketCount)} more.` });
+        }
+
+        // Logic: Check Event Capacity
         if (event.attendees.length + quantity > event.maxAttendees) {
             return res.status(400).json({ error: "Not enough tickets remaining" });
         }
@@ -230,6 +256,15 @@ router.post('/verify-payment', authenticateJWT, async (req, res) => {
         const eventsCollection = getEventsCollection();
         const userId = req.userId;
 
+        // Security: Check limit again
+        const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) });
+        if (!event) return res.status(404).json({ error: "Event not found" });
+        
+        const userTicketCount = event.attendees ? event.attendees.filter(a => a.userId === userId).length : 0;
+        if (userTicketCount + qty > 10) {
+            return res.status(400).json({ error: "Ticket limit exceeded (Max 10)" });
+        }
+
         const tickets = [];
         for(let i=0; i<qty; i++) {
             tickets.push({
@@ -266,8 +301,7 @@ router.post('/verify-payment', authenticateJWT, async (req, res) => {
         );
 
         // Send Email Async (Don't await to keep UI fast)
-        const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) });
-        
+        // Pass array of tickets
         sendTicketEmail(req.userEmail, event, tickets).catch(err => console.error("Background Email Error:", err));
 
         res.status(200).json({ success: true, message: "Payment verified and joined!" });
@@ -285,8 +319,10 @@ router.post('/join', authenticateJWT, async (req, res) => {
         const eventsCollection = getEventsCollection();
         const userId = req.userId; 
         const { eventId } = req.body;
+        const quantity = parseInt(req.body.quantity) || 1;
 
         if (!eventId) return res.status(400).json({ error: "Missing Event ID" });
+        if (quantity < 1 || quantity > 10) return res.status(400).json({ error: "Invalid quantity (1-10)" });
 
         // Enforce payment: Check if event has a price
         const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) });
@@ -295,29 +331,38 @@ router.post('/join', authenticateJWT, async (req, res) => {
             return res.status(402).json({ error: "Payment required for this event" });
         }
 
-        const ticketId = `free_${new ObjectId().toString()}`;
+        // Logic: Check User Quota
+        const userTicketCount = event.attendees ? event.attendees.filter(a => a.userId === userId).length : 0;
+        if (userTicketCount + quantity > 10) {
+             return res.status(400).json({ error: `Limit reached. You can only buy ${Math.max(0, 10 - userTicketCount)} more.` });
+        }
+
+        const tickets = [];
+        for(let i=0; i<quantity; i++) {
+            tickets.push({
+                userId,
+                name: req.userName,
+                status: 'pending',
+                joinedAt: new Date(),
+                ticketId: `free_${new ObjectId().toString()}`
+            });
+        }
+
         const eventUpdate = await eventsCollection.updateOne(
             { 
                 _id: new ObjectId(eventId),
-                // BUG FIX: Removed $toInt crash. Direct comparison is safer.
-                $expr: { $lt: [{ $size: "$attendees" }, "$maxAttendees"] },
-                "attendees.userId": { $ne: userId },
+                // Allow multiple joins, so remove "attendees.userId": { $ne: userId }
+                $expr: { $lt: [{ $add: [{ $size: "$attendees" }, quantity] }, "$maxAttendees"] },
                 creatorId: { $ne: userId }
             },
             { 
                 $push: { 
-                    attendees: { 
-                        userId, 
-                        name: req.userName, 
-                        status: 'pending',
-                        joinedAt: new Date(),
-                        ticketId: ticketId // Added ticketId
-                    } 
+                    attendees: { $each: tickets } 
                 } 
             }
         );
 
-        if (eventUpdate.matchedCount === 0) return res.status(400).json({ error: "Can't join: Full, joined, or owner." });
+        if (eventUpdate.matchedCount === 0) return res.status(400).json({ error: "Can't join: Full or owner." });
 
         await usersCollection.updateOne(
             { _id: new ObjectId(userId) },
@@ -325,14 +370,7 @@ router.post('/join', authenticateJWT, async (req, res) => {
         );
 
         // Send Email Async
-        const ticketData = {
-            eventId,
-            userId,
-            userName: req.userName,
-            ticketId: ticketId,
-            valid: true
-        };
-        sendTicketEmail(req.userEmail, event, ticketData).catch(err => console.error("Background Email Error:", err));
+        sendTicketEmail(req.userEmail, event, tickets).catch(err => console.error("Background Email Error:", err));
 
         res.status(200).json({ success: true, message: "Successfully joined!" });
     } catch (e) { 

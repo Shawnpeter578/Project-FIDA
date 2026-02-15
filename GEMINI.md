@@ -23,16 +23,17 @@ The application follows a simplified MVC structure where controllers are integra
 *   **Database:** `src/database/mongodb.js` (Singleton connection pattern).
 *   **Routes:**
     *   `src/auth_path.js`: Authentication (Signup, Login, Me, Google) & Profile Management (`PUT /me`).
-    *   `src/event_path.js`: Event CRUD, Joining (Razorpay), Check-in, Artist Applications & Feed.
+    *   `src/event_path.js`: Event CRUD, Public Detail (`GET /:id`), Joining (Razorpay), Check-in, Artist Applications & Feed.
     *   `src/admin_path.js`: Admin Dashboard API (Login, Data, Delete).
 
 ### Key Directories
 *   `src/`: Backend logic.
-    *   `auth/`: OAuth strategies and JWT middleware.
+    *   `auth/`: OAuth strategies and JWT middleware (1h expiry).
     *   `database/`: MongoDB and Cloudinary integrations.
     *   `utils/`: Email utilities and helper functions.
 *   `dist/`: Public frontend assets.
     *   `index.html`: Main User Dashboard & Feed.
+    *   `event.html`: Public Event Detail page (Shareable URL).
     *   `login.html`: Unified authentication page.
     *   `organizer.html` / `organizer.app.js`: Organizer Management Console.
     *   `artist-dashboard.html`: Artist-specific interface.
@@ -47,6 +48,7 @@ The application follows a simplified MVC structure where controllers are integra
 *   Node.js (v18+)
 *   MongoDB Instance
 *   `.env` file (see Configuration)
+*   `uploads/` directory (for temporary Multer storage)
 
 ### Commands
 | Command | Description |
@@ -74,7 +76,7 @@ SESSION_SECRET=...
 
 ## Features
 *   **Role-Based Access:** 
-    *   **User:** Join events (Free/Paid), view passes, generate QR codes, manage profile.
+    *   **User:** Join events (Free/Paid), buy multiple tickets (max 10), view passes, generate QR codes, manage profile.
     *   **Organizer (Host):** Create events, scan QR codes (Check-in), manage guest lists, view sales analytics.
     *   **Artist:** Apply to perform at events, manage artist profile.
 *   **Admin Dashboard:**
@@ -84,11 +86,18 @@ SESSION_SECRET=...
     *   Event management (Delete).
     *   **Organizer Analytics:** Revenue calculation and event history in expanded user view.
 *   **Event Feed:** Optimized "Recent Releases" ranking with lazy loading (pagination) support.
-*   **Event Management:** Image uploads, categorical filtering, mode (online/offline), artist application toggles.
+*   **Public Access:** Shareable event links (`event.html?id=...`) allowing guests to view details before signing in.
+*   **Event Management:** Image uploads (Multer disk storage), categorical filtering, mode (online/offline), artist application toggles.
 *   **Ticket System:** 
-    *   **Purchase:** Integrated Razorpay for paid events with multi-ticket support.
-    *   **Delivery:** Automated email delivery with CID-embedded QR codes.
+    *   **Purchase:** Integrated Razorpay for paid events with multi-ticket support (quantity selector).
+    *   **Delivery:** Automated email delivery with CID-embedded QR codes (supports multiple tickets).
     *   **Validation:** Secure hyphenated QR format (`eventId-ticketId`) with replay protection (Check-in).
+*   **Security:**
+    *   Strict environment variable enforcement.
+    *   JWT expiration reduced to 1 hour.
+    *   Rate limiting (100 requests / 15 mins) on API endpoints.
+    *   Request payload limits (10mb) to prevent DoS.
+    *   CORS restricted to trusted origins.
 *   **UI:** Glassmorphism "Ultra UI" design, "Dock" navigation, Crimson & Platinum theme.
 
 ## Code of Conduct

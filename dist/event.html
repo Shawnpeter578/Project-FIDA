@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Event Details | GigByCity</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Libre+Barcode+128+Text&display=swap" rel="stylesheet">
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        body { padding-bottom: 100px; }
+        .back-nav {
+            position: fixed; top: 0; left: 0; right: 0;
+            padding: 16px 20px;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .event-hero {
+            width: 100%; aspect-ratio: 16/9;
+            object-fit: cover;
+            border-radius: 0 0 24px 24px;
+            margin-top: 60px;
+            background: var(--bg-card-sub);
+        }
+        .event-container { padding: 24px; }
+        .footer-action {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            padding: 16px 24px;
+            background: white;
+            border-top: 1px solid var(--border);
+            display: flex; gap: 12px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="back-nav">
+        <button onclick="window.location.href='index.html'" style="background:transparent; border:1px solid var(--border); width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+            <svg class="icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        </button>
+        <span style="font-weight: 700; font-size: 1.1rem;">Event Details</span>
+    </nav>
+
+    <img id="eImage" class="event-hero" style="display:none;">
+
+    <div class="event-container">
+        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
+            <h1 id="eTitle" style="font-size: 2rem; font-weight: 800; line-height: 1.1; max-width: 80%;">Loading...</h1>
+            <button onclick="shareEvent()" style="background:var(--bg-card-sub); border:none; width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                <svg class="icon" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+            </button>
+        </div>
+
+        <div style="display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
+            <div class="chip active" id="eCategory">CATEGORY</div>
+            <div class="chip" style="background:transparent; border:1px solid var(--border); color:var(--text-main);" id="eDate">DATE</div>
+            <div class="chip" style="background:transparent; border:1px solid var(--border); color:var(--text-main);" id="eLoc">LOCATION</div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card-sub); padding:16px; border-radius:16px; margin-bottom:24px;">
+            <div>
+                <div style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">HOSTED BY</div>
+                <div style="font-weight:700;" id="eHost">...</div>
+            </div>
+             <div>
+                <div style="font-size:0.8rem; font-weight:600; color:var(--text-muted); text-align:right;">SPOTS</div>
+                <div style="font-weight:700; text-align:right;" id="eSpots">...</div>
+            </div>
+        </div>
+
+        <h3 style="font-size:1.2rem; font-weight:700; margin-bottom:8px;">About</h3>
+        <p id="eDesc" style="color:var(--text-sec); line-height:1.6; margin-bottom:40px;">...</p>
+
+        <div id="qtySelector" class="quantity-control" style="display:none; background:var(--bg-body); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:24px; justify-content:space-between; align-items:center;">
+            <span style="font-weight:700;">Tickets</span>
+            <div style="display:flex; align-items:center; gap:16px;">
+                <button onclick="updateQuantity(-1)" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--border); background:white;">-</button>
+                <span id="qtyCount" style="font-weight:700; width:20px; text-align:center;">1</span>
+                <button onclick="updateQuantity(1)" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--border); background:white;">+</button>
+            </div>
+            <span id="qtyTotal" style="font-weight:800; min-width:60px; text-align:right;">...</span>
+        </div>
+    </div>
+
+    <div class="footer-action">
+        <div style="flex:1;">
+            <div style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">PRICE</div>
+            <div style="font-size:1.5rem; font-weight:800;" id="ePrice">...</div>
+        </div>
+        <button id="btnJoin" class="btn-main" style="flex:2;" onclick="handleJoin()">GET PASS</button>
+    </div>
+
+    <!-- Auth Required Modal -->
+    <div id="authRequiredModal" class="overlay">
+        <div class="sheet" style="height: auto; max-height: 50vh;">
+            <div class="sheet-handle"></div>
+            <div class="sheet-body" style="text-align: center; padding: 40px 24px;">
+                <div style="width: 64px; height: 64px; background: var(--bg-card-sub); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;">
+                     <svg class="icon" viewBox="0 0 24 24" style="width: 32px; height: 32px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+                <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 12px;">Sign In Required</h2>
+                <p style="color: var(--text-sec); margin-bottom: 32px; font-weight: 500;">You need to be signed in to purchase tickets.</p>
+                <button class="btn-main" onclick="window.location.href='login.html'">SIGN IN</button>
+                <button onclick="document.getElementById('authRequiredModal').classList.remove('visible')" style="margin-top: 16px; background: none; border: none; font-weight: 700; color: var(--text-muted); cursor: pointer; padding: 10px;">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">
+        <div class="toast-icon"></div>
+        <span id="toastMsg" style="font-weight:600; font-size:0.95rem;">Notification</span>
+    </div>
+
+<script>
+    // --- API & CONFIG ---
+    const FidaAPI = {
+        BASE_URL: window.location.hostname.includes('koyeb.app') 
+            ? 'https://independent-irita-clubspot-9e43f2fa.koyeb.app/api' 
+            : 'http://localhost:3000/api',
+        
+        getHeaders() {
+            return { 
+                'Authorization': `Bearer ${localStorage.getItem('fida_token')}`,
+                'Content-Type': 'application/json'
+            };
+        }
+    };
+
+    let currentEvent = null;
+    let currentUser = null;
+    let currentQuantity = 1;
+    let userTicketCount = 0;
+
+    // --- INIT ---
+    window.addEventListener('load', async () => {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+        
+        if(!id) {
+            alert("No event specified");
+            window.location.href = 'index.html';
+            return;
+        }
+
+        // Check Auth (Silent)
+        const token = localStorage.getItem('fida_token');
+        if(token) {
+            try {
+                const res = await fetch(`${FidaAPI.BASE_URL}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if(res.ok) currentUser = await res.json();
+            } catch(e) { console.log("Guest mode"); }
+        }
+
+        loadEvent(id);
+    });
+
+    async function loadEvent(id) {
+        try {
+            const res = await fetch(`${FidaAPI.BASE_URL}/events/${id}`);
+            if(!res.ok) throw new Error("Event not found");
+            
+            currentEvent = await res.json();
+            renderEvent(currentEvent);
+        } catch(e) {
+            document.getElementById('eTitle').innerText = "Event Not Found";
+            document.getElementById('btnJoin').disabled = true;
+        }
+    }
+
+    function renderEvent(event) {
+        document.getElementById('eTitle').innerText = event.title;
+        document.getElementById('eDesc').innerText = event.description || 'No description';
+        document.getElementById('eCategory').innerText = event.category || 'EVENT';
+        document.getElementById('eDate').innerText = new Date(event.date).toLocaleDateString();
+        document.getElementById('eLoc').innerText = event.location;
+        document.getElementById('eHost').innerText = event.creatorName || 'Unknown';
+        
+        const price = event.price ? `₹${event.price}` : 'FREE';
+        document.getElementById('ePrice').innerText = price;
+
+        if(event.image) {
+            const img = document.getElementById('eImage');
+            img.src = event.image;
+            img.style.display = 'block';
+        }
+
+        const count = event.attendees ? event.attendees.length : 0;
+        const max = event.maxAttendees || Infinity;
+        const spots = max === Infinity ? 'Unlimited' : `${max - count} left`;
+        document.getElementById('eSpots').innerText = spots;
+
+        // Logic: Check user ticket count
+        userTicketCount = 0;
+        if (currentUser && event.attendees) {
+            userTicketCount = event.attendees.filter(a => a.userId === currentUser._id).length;
+        }
+
+        const isSoldOut = count >= max;
+        const btn = document.getElementById('btnJoin');
+        const qtySelector = document.getElementById('qtySelector');
+        
+        if (isSoldOut && userTicketCount === 0) {
+            btn.innerText = 'SOLD OUT';
+            btn.disabled = true;
+            btn.style.opacity = 0.5;
+            qtySelector.style.display = 'none';
+        } else if (userTicketCount >= 10) {
+            btn.innerText = 'MAX LIMIT REACHED';
+            btn.disabled = true;
+            btn.style.opacity = 0.5;
+            qtySelector.style.display = 'none';
+        } else {
+            // Can buy (or buy more)
+            btn.disabled = false;
+            btn.innerText = userTicketCount > 0 ? 'BUY MORE' : 'GET PASS';
+            qtySelector.style.display = 'flex';
+            currentQuantity = 1;
+            updateQuantity(0); // Refresh UI
+        }
+    }
+
+    function updateQuantity(change) {
+        let newQty = currentQuantity + change;
+        const maxAllowed = 10 - userTicketCount;
+        
+        if (newQty < 1) newQty = 1;
+        if (newQty > maxAllowed) newQty = maxAllowed;
+        
+        currentQuantity = newQty;
+        
+        document.getElementById('qtyCount').innerText = currentQuantity;
+        const price = currentEvent.price || 0;
+        const total = price * currentQuantity;
+        document.getElementById('qtyTotal').innerText = total > 0 ? `₹${total}` : 'FREE';
+    }
+
+    function shareEvent() {
+        const url = window.location.href;
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('Link Copied!');
+        });
+    }
+
+    function handleJoin() {
+        if(!currentUser) {
+            document.getElementById('authRequiredModal').classList.add('visible');
+            return;
+        }
+        joinClub(currentEvent._id);
+    }
+
+    async function joinClub(id) {
+        const btn = document.getElementById('btnJoin');
+        const originalText = btn.innerText;
+        btn.innerText = 'PROCESSING...';
+        btn.disabled = true;
+
+        try {
+            // Check if FREE
+            if (!currentEvent.price || currentEvent.price === 0) {
+                 const res = await fetch(`${FidaAPI.BASE_URL}/events/join`, {
+                    method: 'POST',
+                    headers: FidaAPI.getHeaders(),
+                    body: JSON.stringify({ eventId: id, quantity: currentQuantity })
+                });
+                const data = await res.json();
+                if(res.ok) {
+                    showToast('Joined Successfully!');
+                    setTimeout(() => window.location.href = 'index.html', 1500);
+                } else {
+                    showToast(data.error || 'Failed to join');
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+                return;
+            }
+
+            // PAID FLOW
+            const resOrder = await fetch(`${FidaAPI.BASE_URL}/events/create-order`, {
+                method: 'POST',
+                headers: FidaAPI.getHeaders(),
+                body: JSON.stringify({ eventId: id, quantity: currentQuantity })
+            });
+            const orderData = await resOrder.json();
+
+            if (!orderData.success) {
+                showToast(orderData.error || 'Order Failed');
+                btn.innerText = originalText;
+                btn.disabled = false;
+                return;
+            }
+
+            const options = {
+                key: orderData.key,
+                amount: orderData.amount,
+                currency: "INR",
+                name: "GigByCity",
+                description: `Entry for ${orderData.eventTitle} (x${currentQuantity})`,
+                order_id: orderData.orderId,
+                handler: async function (response) {
+                    const verifyRes = await fetch(`${FidaAPI.BASE_URL}/events/verify-payment`, {
+                        method: 'POST',
+                        headers: FidaAPI.getHeaders(),
+                        body: JSON.stringify({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
+                            eventId: id,
+                            quantity: currentQuantity
+                        })
+                    });
+                    const verifyData = await verifyRes.json();
+
+                    if (verifyData.success) {
+                        showToast('Payment Successful!');
+                        setTimeout(() => window.location.href = 'index.html', 1500);
+                    } else {
+                        showToast('Verification Failed');
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    }
+                },
+                prefill: {
+                    name: currentUser.name,
+                    email: currentUser.email,
+                },
+                theme: { color: "#000000" }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response) {
+                showToast('Payment Failed');
+                btn.innerText = originalText;
+                btn.disabled = false;
+            });
+            rzp.open();
+
+        } catch(e) {
+            console.error(e);
+            showToast('Network Error');
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        document.getElementById('toastMsg').textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+</script>
+</body>
+</html>
