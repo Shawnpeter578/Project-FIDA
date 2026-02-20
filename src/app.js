@@ -32,7 +32,7 @@ const apiLimiter = rateLimit({
 });
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://independent-irita-clubspot-9e43f2fa.koyeb.app', 'https://gig-by-city.vercel.app', 'https://gigbycity.vercel.app', 'https://gigbycity.com'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://independent-irita-clubspot-9e43f2fa.koyeb.app', 'https://gigbycity.com', 'https://gigbycity.vercel.app'],
   methods: ['POST', 'PUT', 'GET', 'OPTIONS', 'HEAD', 'DELETE'],
 }));
 

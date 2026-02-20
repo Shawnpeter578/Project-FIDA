@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
 
 const generateQRCode = async (data) => {
     try {
-        return await QRCode.toDataURL(JSON.stringify(data));
+        return await QRCode.toDataURL(data);
     } catch (err) {
         console.error("QR Gen Error", err);
         return null;
